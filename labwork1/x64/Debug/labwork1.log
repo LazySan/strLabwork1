@@ -1,0 +1,7 @@
+﻿  labwork1.cpp
+labwork1.obj : error LNK2019: símbolo externo não resolvido, vAssertCalled, referenciado na função "void __cdecl initialiseHeap(void)" (?initialiseHeap@@YAXXZ)
+labwork1.obj : error LNK2019: símbolo externo não resolvido, vPortDefineHeapRegions, referenciado na função "void __cdecl initialiseHeap(void)" (?initialiseHeap@@YAXXZ)
+labwork1.obj : error LNK2019: símbolo externo não resolvido, xTaskCreate, referenciado na função main
+..\lib\freeRTOS.lib : warning LNK4272: o tipo de máquina da biblioteca 'x86' está em conflito com o tipo de máquina de destino 'x64'
+..\lib\NIDAQmx.lib : warning LNK4272: o tipo de máquina da biblioteca 'x86' está em conflito com o tipo de máquina de destino 'x64'
+C:\str\labwork1\x64\Debug\labwork1.exe : fatal error LNK1120: 3 externo não resolvidos

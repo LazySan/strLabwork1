@@ -1,0 +1,170 @@
+#include "my_interaction_functions.h"
+
+int getBitValue(uInt8 value, uInt8 bit_n)
+// given a byte value, returns the value of its bit n
+{
+	return(value & (1 << bit_n));
+}
+
+void setBitValue(uInt8* variable, int n_bit, int new_value_bit)
+// given a byte value, set the n bit to value
+{
+	uInt8 mask_on = (uInt8)(1 << n_bit);
+	uInt8 mask_off = ~mask_on;
+	if (new_value_bit) *variable |= mask_on;
+	else *variable &= mask_off;
+}
+
+void moveCylinderStartFront()
+{
+	uInt8 p = readDigitalU8(2); // read port 2
+	setBitValue(&p, 0, 0); // set bit 0 to low level
+	setBitValue(&p, 1, 1); // set bit 1 to high level
+	writeDigitalU8(2, p); // update port 2
+}
+
+void moveCylinderStartBack()
+{
+	uInt8 p = readDigitalU8(2); // read port 2
+	setBitValue(&p, 0, 1); // set bit 1 to low level
+	setBitValue(&p, 1, 0); // set bit 0 to high level
+	writeDigitalU8(2, p); // update port 2
+}
+
+void stopCylinderStart()
+{
+	uInt8 p = readDigitalU8(2); // read port 2
+	setBitValue(&p, 0, 0); // set bit 0 to low level
+	setBitValue(&p, 1, 0); // set bit 1 to low level
+	writeDigitalU8(2, p); // update port 2
+}
+
+int getCylinderStartPosition()
+{
+	uInt8 p0 = readDigitalU8(0);
+	if (getBitValue(p0, 6))
+		return 0;
+	if (getBitValue(p0, 5))
+		return 1;
+	return(-1);
+}
+
+void gotoCylinderStart(int pos)
+{
+	switch (pos) {
+		case 0:
+			moveCylinderStartBack();
+			break;
+		case 1:
+			moveCylinderStartFront();
+			break;
+	}
+	//Enquanto nao chegar à posição, espera
+	while (getCylinderStartPosition() != pos) {
+		continue;
+	};
+	stopCylinderStart();
+}
+
+void moveCylinder1Front()
+{
+	uInt8 p = readDigitalU8(2); // read port 2
+	setBitValue(&p, 3, 0); // set bit 0 to low level
+	setBitValue(&p, 4, 1); // set bit 1 to high level
+	writeDigitalU8(2, p); // update port 2
+}
+
+void moveCylinder1Back()
+{
+	uInt8 p = readDigitalU8(2); // read port 2
+	setBitValue(&p, 3, 1); // set bit 0 to low level
+	setBitValue(&p, 4, 0); // set bit 1 to high level
+	writeDigitalU8(2, p); // update port 2
+}
+
+void stopCylinder1()
+{
+	uInt8 p = readDigitalU8(2); // read port 2
+	setBitValue(&p, 3, 0); // set bit 0 to low level
+	setBitValue(&p, 4, 0); // set bit 1 to high level
+	writeDigitalU8(2, p); // update port 2
+}
+
+int getCylinder1Position()
+{
+	uInt8 p0 = readDigitalU8(0);
+	if (!getBitValue(p0, 4))
+		return 0;
+	if (!getBitValue(p0, 3))
+		return 1;
+	return(-1);
+}
+
+void gotoCylinder1(int pos)
+{
+	switch (pos) {
+	case 0:
+		moveCylinder1Back();
+		break;
+	case 1:
+		moveCylinder1Front();
+		break;
+	}
+	//Enquanto nao chegar à posição, espera
+	while (getCylinder1Position() != pos) {
+		continue;
+	};
+	stopCylinder1();
+}
+
+void moveCylinder2Front()
+{
+	uInt8 p = readDigitalU8(2); // read port 2
+	setBitValue(&p, 5, 0); // set bit 0 to low level
+	setBitValue(&p, 6, 1); // set bit 1 to high level
+	writeDigitalU8(2, p); // update port 2
+}
+
+void moveCylinder2Back()
+{
+	uInt8 p = readDigitalU8(2); // read port 2
+	setBitValue(&p, 5, 1); // set bit 0 to low level
+	setBitValue(&p, 6, 0); // set bit 1 to high level
+	writeDigitalU8(2, p); // update port 2
+}
+
+void stopCylinder2()
+{
+	uInt8 p = readDigitalU8(2); // read port 2
+	setBitValue(&p, 5, 0); // set bit 0 to low level
+	setBitValue(&p, 6, 0); // set bit 1 to high level
+	writeDigitalU8(2, p); // update port 2
+}
+
+int getCylinder2Position()
+{
+	uInt8 p0 = readDigitalU8(0);
+	if (!getBitValue(p0, 2))
+		return 0;
+	if (!getBitValue(p0, 1))
+		return 1;
+	return(-1);
+}
+
+void gotoCylinder2(int pos)
+{
+	switch (pos) {
+	case 0:
+		moveCylinder2Back();
+		break;
+	case 1:
+		moveCylinder2Front();
+		break;
+	}
+
+	//Enquanto nao chegar à posição, espera
+	while (getCylinder2Position() != pos) {
+		continue;
+	};
+	stopCylinder2();
+}
