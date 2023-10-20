@@ -36,7 +36,7 @@
     <Library Include="..\lib\NIDAQmx.lib" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\my_interaction_functions\my_interaction_functions.h">
+    <ClInclude Include="..\include\my_interaction_functions.h">
       <Filter>Arquivos de Cabeçalho</Filter>
     </ClInclude>
   </ItemGroup>

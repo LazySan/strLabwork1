@@ -1,4 +1,10 @@
 #include "my_interaction_functions.h"
+#include <interface.h>
+#include <FreeRTOS.h>
+#include <task.h>
+#include <timers.h>
+#include <semphr.h>
+#include <interrupts.h>
 
 int getBitValue(uInt8 value, uInt8 bit_n)
 // given a byte value, returns the value of its bit n
@@ -17,31 +23,52 @@ void setBitValue(uInt8* variable, int n_bit, int new_value_bit)
 
 void moveCylinderStartFront()
 {
+	taskENTER_CRITICAL();
 	uInt8 p = readDigitalU8(2); // read port 2
+	taskEXIT_CRITICAL();
+
 	setBitValue(&p, 0, 0); // set bit 0 to low level
 	setBitValue(&p, 1, 1); // set bit 1 to high level
+
+	taskENTER_CRITICAL();
 	writeDigitalU8(2, p); // update port 2
+	taskEXIT_CRITICAL();
 }
 
 void moveCylinderStartBack()
 {
+	taskENTER_CRITICAL();
 	uInt8 p = readDigitalU8(2); // read port 2
+	taskEXIT_CRITICAL();
+
 	setBitValue(&p, 0, 1); // set bit 1 to low level
 	setBitValue(&p, 1, 0); // set bit 0 to high level
+
+	taskENTER_CRITICAL();
 	writeDigitalU8(2, p); // update port 2
+	taskEXIT_CRITICAL();
 }
 
 void stopCylinderStart()
 {
+	taskENTER_CRITICAL();
 	uInt8 p = readDigitalU8(2); // read port 2
+	taskEXIT_CRITICAL();
+
 	setBitValue(&p, 0, 0); // set bit 0 to low level
 	setBitValue(&p, 1, 0); // set bit 1 to low level
+	
+	taskENTER_CRITICAL();
 	writeDigitalU8(2, p); // update port 2
+	taskEXIT_CRITICAL();
 }
 
-int getCylinderStartPosition()
+int getCylinderStartPos()
 {
+	taskENTER_CRITICAL();
 	uInt8 p0 = readDigitalU8(0);
+	taskEXIT_CRITICAL();
+
 	if (getBitValue(p0, 6))
 		return 0;
 	if (getBitValue(p0, 5))
@@ -60,7 +87,7 @@ void gotoCylinderStart(int pos)
 			break;
 	}
 	//Enquanto nao chegar à posição, espera
-	while (getCylinderStartPosition() != pos) {
+	while (getCylinderStartPos() != pos) {
 		continue;
 	};
 	stopCylinderStart();
@@ -68,31 +95,50 @@ void gotoCylinderStart(int pos)
 
 void moveCylinder1Front()
 {
+	taskENTER_CRITICAL();
 	uInt8 p = readDigitalU8(2); // read port 2
+
 	setBitValue(&p, 3, 0); // set bit 0 to low level
 	setBitValue(&p, 4, 1); // set bit 1 to high level
+	
 	writeDigitalU8(2, p); // update port 2
+	taskEXIT_CRITICAL();
 }
 
 void moveCylinder1Back()
 {
+	taskENTER_CRITICAL();
 	uInt8 p = readDigitalU8(2); // read port 2
+	taskEXIT_CRITICAL();
+
 	setBitValue(&p, 3, 1); // set bit 0 to low level
 	setBitValue(&p, 4, 0); // set bit 1 to high level
+	
+	taskENTER_CRITICAL();
 	writeDigitalU8(2, p); // update port 2
+	taskEXIT_CRITICAL();
 }
 
 void stopCylinder1()
 {
+	taskENTER_CRITICAL();
 	uInt8 p = readDigitalU8(2); // read port 2
+	taskEXIT_CRITICAL();
+	
 	setBitValue(&p, 3, 0); // set bit 0 to low level
 	setBitValue(&p, 4, 0); // set bit 1 to high level
+	
+	taskENTER_CRITICAL();
 	writeDigitalU8(2, p); // update port 2
+	taskEXIT_CRITICAL();
 }
 
-int getCylinder1Position()
+int getCylinder1Pos()
 {
+	taskENTER_CRITICAL();
 	uInt8 p0 = readDigitalU8(0);
+	taskEXIT_CRITICAL();
+
 	if (!getBitValue(p0, 4))
 		return 0;
 	if (!getBitValue(p0, 3))
@@ -111,7 +157,18 @@ void gotoCylinder1(int pos)
 		break;
 	}
 	//Enquanto nao chegar à posição, espera
-	while (getCylinder1Position() != pos) {
+	while (getCylinder1Pos() != pos) {
+		continue;
+	};
+	stopCylinder1();
+}
+
+void calibrationCylinder1()
+{
+	moveCylinder1Front();
+
+	//Enquanto nao chegar à posição, espera
+	while (getCylinder1Pos() != 0) {
 		continue;
 	};
 	stopCylinder1();
@@ -119,31 +176,50 @@ void gotoCylinder1(int pos)
 
 void moveCylinder2Front()
 {
+	taskENTER_CRITICAL();
 	uInt8 p = readDigitalU8(2); // read port 2
+
 	setBitValue(&p, 5, 0); // set bit 0 to low level
 	setBitValue(&p, 6, 1); // set bit 1 to high level
+	
 	writeDigitalU8(2, p); // update port 2
+	taskEXIT_CRITICAL();
 }
 
 void moveCylinder2Back()
 {
+	taskENTER_CRITICAL();
 	uInt8 p = readDigitalU8(2); // read port 2
+	taskEXIT_CRITICAL();
+
 	setBitValue(&p, 5, 1); // set bit 0 to low level
 	setBitValue(&p, 6, 0); // set bit 1 to high level
+
+	taskENTER_CRITICAL();
 	writeDigitalU8(2, p); // update port 2
+	taskEXIT_CRITICAL();
 }
 
 void stopCylinder2()
 {
+	taskENTER_CRITICAL();
 	uInt8 p = readDigitalU8(2); // read port 2
+	taskEXIT_CRITICAL();
+
 	setBitValue(&p, 5, 0); // set bit 0 to low level
 	setBitValue(&p, 6, 0); // set bit 1 to high level
+	
+	taskENTER_CRITICAL();
 	writeDigitalU8(2, p); // update port 2
+	taskEXIT_CRITICAL();
 }
 
-int getCylinder2Position()
+int getCylinder2Pos()
 {
+	taskENTER_CRITICAL();
 	uInt8 p0 = readDigitalU8(0);
+	taskEXIT_CRITICAL();
+
 	if (!getBitValue(p0, 2))
 		return 0;
 	if (!getBitValue(p0, 1))
@@ -163,7 +239,18 @@ void gotoCylinder2(int pos)
 	}
 
 	//Enquanto nao chegar à posição, espera
-	while (getCylinder2Position() != pos) {
+	while (getCylinder2Pos() != pos) {
+		continue;
+	};
+	stopCylinder2();
+}
+
+void calibrationCylinder2()
+{
+	moveCylinder2Front();
+
+	//Enquanto nao chegar à posição, espera
+	while (getCylinder2Pos() != 0) {
 		continue;
 	};
 	stopCylinder2();

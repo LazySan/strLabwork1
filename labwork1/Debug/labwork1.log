@@ -1,13 +1,2 @@
-﻿  my_interaction_functions.cpp
-  labwork1.cpp
-  Gerando Código...
-  interface.c
-C:\str\source\interface.c(300,1): warning C4142: 'closeChannels': redefinição benigna de tipo
-c:\str\include\interface.h(10,6): message : consulte a declaração de 'closeChannels'
-  mongoose.c
-  sim_server.c
-  Gerando Código...
-freeRTOS.lib(main.obj) : warning LNK4099: PDB '' não foi encontrado 'freeRTOS.lib(main.obj)' ou no ''; vinculando objeto quando quando sem nenhuma informação de depuração
-freeRTOS.lib(port.obj) : warning LNK4099: PDB '' não foi encontrado 'freeRTOS.lib(port.obj)' ou no ''; vinculando objeto quando quando sem nenhuma informação de depuração
-freeRTOS.lib(main_blinky.obj) : warning LNK4099: PDB '' não foi encontrado 'freeRTOS.lib(main_blinky.obj)' ou no ''; vinculando objeto quando quando sem nenhuma informação de depuração
+﻿  labwork1.cpp
   labwork1.vcxproj -> C:\str\labwork1\Debug\labwork1.exe

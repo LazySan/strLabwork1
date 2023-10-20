@@ -5,7 +5,7 @@
 #include<conio.h>
 #include<stdlib.h>
 #include<windows.h> // for the Sleep function
-#include "C:\str\my_interaction_functions\my_interaction_functions.h"
+#include "my_interaction_functions.h"
 
 extern "C" {
 #include <interface.h>
@@ -16,11 +16,19 @@ extern "C" {
 #include <interrupts.h>
 }
 
+#define FRONT 1
+#define BACK 0
+
 #define mainREGION_1_SIZE   8201
 #define mainREGION_2_SIZE   29905
 #define mainREGION_3_SIZE   7607
 
-xSemaphoreHandle xSemaphore;
+xSemaphoreHandle xSemaphoreCylinder0;
+xSemaphoreHandle xSemaphoreCylinder1;
+xSemaphoreHandle xSemaphoreCylinder2;
+
+xSemaphoreHandle xSemaphoreCylinder1Calibration;
+xSemaphoreHandle xSemaphoreCylinder2Calibration;
 
 void menu() {
 	int tecla = 0;
@@ -48,6 +56,86 @@ void menu() {
 	}
 }
 
+void vTaskPushBlockCylinder0(void* pvParameters)
+{
+	while (true) {
+		xSemaphoreTake(xSemaphoreCylinder0, portMAX_DELAY);
+
+		gotoCylinderStart(FRONT);
+		gotoCylinderStart(BACK);
+	}
+}
+
+void vTaskPushBlockCylinder1(void* pvParameters)
+{
+	while (true) {
+		xSemaphoreTake(xSemaphoreCylinder1, portMAX_DELAY);
+
+		gotoCylinder1(FRONT);
+		gotoCylinder1(BACK);
+	}
+}
+
+void vTaskPushBlockCylinder2(void* pvParameters)
+{
+	while (true) {
+		xSemaphoreTake(xSemaphoreCylinder2, portMAX_DELAY);
+
+		gotoCylinder2(FRONT);
+		gotoCylinder2(BACK);
+
+	}
+}
+
+void vTaskCylinder1Calibration(void* pvParameters)
+{
+	while (true) {
+		xSemaphoreTake(xSemaphoreCylinder1Calibration, portMAX_DELAY);
+
+		calibrationCylinder1();
+	}
+}
+
+void vTaskCylinder2Calibration(void* pvParameters)
+{
+	while (true) {
+		xSemaphoreTake(xSemaphoreCylinder2Calibration, portMAX_DELAY);
+
+		calibrationCylinder2();
+	}
+}
+
+void inicializarPortos() {
+	printf("\nwaiting for hardware simulator...");
+	printf("\nReminding: gotoXZ requires kit calibration first...");
+	createDigitalInput(0);
+	createDigitalInput(1);
+	createDigitalOutput(2);
+	writeDigitalU8(2, 0);
+	printf("\ngot access to simulator...");
+}
+
+void myDaemonTaskStartupHook(void) {
+	inicializarPortos();
+
+
+	//Começar semaforos de calibração a 1 para que calibre assim que o programa inicie
+	
+	xSemaphoreCylinder1Calibration = xSemaphoreCreateCounting(1, 1);
+	xSemaphoreCylinder2Calibration = xSemaphoreCreateCounting(1, 1);
+
+	//Semaforos para saber se é preciso ou não empurrar 
+	xSemaphoreCylinder0 = xSemaphoreCreateCounting(100, 1);
+	xSemaphoreCylinder1 = xSemaphoreCreateCounting(100, 0);
+	xSemaphoreCylinder2 = xSemaphoreCreateCounting(100, 0);
+	
+
+	xTaskCreate(vTaskPushBlockCylinder1, "vTask_Cylinder1", 100, NULL, 0, NULL);
+	xTaskCreate(vTaskPushBlockCylinder2, "vTask_Cylinder2", 100, NULL, 0, NULL);
+	xTaskCreate(vTaskCylinder1Calibration, "vTask_Cylinder1Calibration", 100, NULL, 0, NULL);
+	xTaskCreate(vTaskCylinder2Calibration, "vTask_Cylinder2Calibration", 100, NULL, 0, NULL);
+
+}
 
 void vAssertCalled(unsigned long ulLine, const char* const pcFileName)
 {
@@ -101,45 +189,14 @@ static void  initialiseHeap(void)
 	vPortDefineHeapRegions(xHeapRegions);
 }
 
-void inicializarPortos() {
-	printf("\nwaiting for hardware simulator...");
-	printf("\nReminding: gotoXZ requires kit calibration first...");
-	createDigitalInput(0);
-	createDigitalInput(1);
-	createDigitalOutput(2);
-	writeDigitalU8(2, 0);
-	printf("\ngot access to simulator...");
-}
-
-
-void vTaskCalibrar(void* pvParameters)
-{
-	
-}
-
-
-void myDaemonTaskStartupHook(void) {
-	//xTaskCreate(vTaskCode_2, "vTaskCode_1", 100, NULL, 0, NULL);
-	//xTaskCreate(vTaskCode_1, "vTaskCode_2", 100, NULL, 0, NULL);
-	inicializarPortos();
-
-	xSemaphore = xSemaphoreCreateCounting(10, 0);
-	//xTaskCreate(vTask_waits, "vTask_waits", 100, NULL, 0, NULL);
-
-	//attachInterrupt(1, 5, switch1_rising_isr, RISING);
-	//attachInterrupt(1, 5, switch1_falling_isr, FALLING);
-	//attachInterrupt(1, 6, switch2_change_isr, CHANGE);
-
-}
-
-
 int main(int argc, char** argv) {
 	
+	initialiseHeap();
+	vApplicationDaemonTaskStartupHook = &myDaemonTaskStartupHook;
+	vTaskStartScheduler();	
 
-	initialiseHeap();//por no main
-	vApplicationDaemonTaskStartupHook = &myDaemonTaskStartupHook;//por no main
-	vTaskStartScheduler();//por no main
-	//printf("\ncallibrate kit manually and press enter...");
+	Sleep(5000);
+	closeChannels();
 
 }
 
