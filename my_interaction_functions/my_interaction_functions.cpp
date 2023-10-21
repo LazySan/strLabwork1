@@ -23,6 +23,7 @@ void setBitValue(uInt8* variable, int n_bit, int new_value_bit)
 
 void moveCylinderStartFront()
 {
+
 	taskENTER_CRITICAL();
 	uInt8 p = readDigitalU8(2); // read port 2
 	taskEXIT_CRITICAL();
@@ -37,6 +38,7 @@ void moveCylinderStartFront()
 
 void moveCylinderStartBack()
 {
+
 	taskENTER_CRITICAL();
 	uInt8 p = readDigitalU8(2); // read port 2
 	taskEXIT_CRITICAL();

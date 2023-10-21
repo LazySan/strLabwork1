@@ -18,7 +18,6 @@ extern "C" {
 
 #define FRONT 1
 #define BACK 0
-
 #define LEFT 0
 #define RIGHT 1
 
@@ -47,7 +46,58 @@ void menu() {
 }
 
 void vTaskCalibrationStart(void* pvParameters) {
-	//receber inputs do utilizador
+	
+
+	while (true) {
+
+		xSemaphoreTake(xSemaphoreCalibration, portMAX_DELAY);
+
+		int tecla = 0;
+		printf("\nEntrada em modo manual:");
+
+		while (tecla != 27) {
+			tecla = _getch();
+			switch (tecla) {
+				case 'q':
+					moveCylinderStartBack();
+					break;
+				case 'a':
+					moveCylinderStartFront();
+					break;
+				case 'z':
+					stopCylinderStart();
+					break;
+
+				case 'w':
+					moveCylinder1Back();
+					break;
+				case 's':
+					moveCylinder1Front();
+					break;	
+				case 'x':
+					stopCylinder1();
+					break;
+
+				case 'e':
+					moveCylinder2Back();
+					break;
+				case 'd':
+					moveCylinder2Front();
+					break;
+				case 'c':
+					stopCylinder2();
+					break;
+
+				case 27:
+					break;
+
+				default:
+					printf("\nComando nao reconhecido");
+					break;
+			}
+		}
+		printf("\nSaida do modo manual:");
+	}
 }
 
 void vTaskPushBlockCylinder0(void* pvParameters)
@@ -113,7 +163,7 @@ void myDaemonTaskStartupHook(void) {
 	inicializarPortos();
 
 	//Semaforo para iniciar a calibração
-	xSemaphoreCalibration = xSemaphoreCreateCounting(1, 0);
+	xSemaphoreCalibration = xSemaphoreCreateCounting(1, 1);
 
 	//Começar semaforos de calibração a 1 para que calibre assim que o programa inicie
 	xSemaphoreCylinder1Calibration = xSemaphoreCreateCounting(1, 1);
@@ -130,6 +180,7 @@ void myDaemonTaskStartupHook(void) {
 	xTaskCreate(vTaskPushBlockCylinder2, "vTask_Cylinder2", 100, NULL, 0, NULL);
 	xTaskCreate(vTaskCylinder1Calibration, "vTask_Cylinder1Calibration", 100, NULL, 0, NULL);
 	xTaskCreate(vTaskCylinder2Calibration, "vTask_Cylinder2Calibration", 100, NULL, 0, NULL);
+	xTaskCreate(vTaskCalibrationStart, "vTask_ManualCalibration", 100, NULL, 0, NULL);
 
 }
 
