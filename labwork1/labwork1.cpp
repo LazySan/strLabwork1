@@ -21,73 +21,103 @@ extern "C" {
 #define LEFT 0
 #define RIGHT 1
 
+#define WAITTIME 200
+
 #define mainREGION_1_SIZE   8201
 #define mainREGION_2_SIZE   29905
 #define mainREGION_3_SIZE   7607
 
-xSemaphoreHandle xSemaphoreCalibration;
+xSemaphoreHandle xSemaphoreManualCalibration;
+
+xQueueHandle xQueueCylinder0Limit;
+xQueueHandle xQueueCylinder1Limit;
+xQueueHandle xQueueCylinder2Limit;
+
+xSemaphoreHandle xSemaphoreCylinder0Limit;
+xSemaphoreHandle xSemaphoreCylinder1Limit;
+xSemaphoreHandle xSemaphoreCylinder2Limit;
 
 xSemaphoreHandle xSemaphoreCylinder0;
 xSemaphoreHandle xSemaphoreCylinder1;
 xSemaphoreHandle xSemaphoreCylinder2;
 
+xSemaphoreHandle xSemaphoreCylinder0Calibration;
 xSemaphoreHandle xSemaphoreCylinder1Calibration;
 xSemaphoreHandle xSemaphoreCylinder2Calibration;
 
+/*
 void menu() {
 	int tecla = 0;
 
 	while (tecla != 27) {
 		tecla = _getch();
 		if (tecla == 'c') {
-			xSemaphoreGive(xSemaphoreCalibration);
+			xSemaphoreGive(xSemaphoreManualCalibration);
 		}
 	}
 }
+*/
 
-void vTaskCalibrationStart(void* pvParameters) {
+void vTaskManualCalibrationStart(void* pvParameters) {
 	
 
 	while (true) {
 
-		xSemaphoreTake(xSemaphoreCalibration, portMAX_DELAY);
-
+		xSemaphoreTake(xSemaphoreManualCalibration, portMAX_DELAY);
+		int pos0,pos1,pos2;
 		int tecla = 0;
 		printf("\nEntrada em modo manual:");
 
 		while (tecla != 27) {
 			tecla = _getch();
 			switch (tecla) {
+
+				//Cylinder0
 				case 'q':
-					moveCylinderStartBack();
+					moveCylinderStartLeft();
+					pos0 = LEFT;
+					xQueueOverwrite(xQueueCylinder0Limit,&pos0);
 					break;
 				case 'a':
-					moveCylinderStartFront();
+					moveCylinderStartRight();
+					pos0 = RIGHT;
+					xQueueOverwrite(xQueueCylinder0Limit,&pos0);
 					break;
 				case 'z':
 					stopCylinderStart();
 					break;
 
+				//Cylinder1
 				case 'w':
 					moveCylinder1Back();
+					pos1 = BACK;
+					xQueueOverwrite(xQueueCylinder1Limit, &pos1);
 					break;
 				case 's':
 					moveCylinder1Front();
+					pos1 = FRONT;
+					xQueueOverwrite(xQueueCylinder1Limit, &pos1);
 					break;	
 				case 'x':
 					stopCylinder1();
 					break;
 
+				//Cylinder2
 				case 'e':
 					moveCylinder2Back();
+					pos2 = BACK;
+					xQueueOverwrite(xQueueCylinder2Limit, &pos2);
 					break;
 				case 'd':
 					moveCylinder2Front();
+					pos2 = FRONT;
+					xQueueOverwrite(xQueueCylinder2Limit, &pos2);
 					break;
 				case 'c':
 					stopCylinder2();
 					break;
 
+				//IgnorarEsc
 				case 27:
 					break;
 
@@ -131,6 +161,15 @@ void vTaskPushBlockCylinder2(void* pvParameters)
 	}
 }
 
+void vTaskCylinder0Calibration(void* pvParameters)
+{
+	while (true) {
+		xSemaphoreTake(xSemaphoreCylinder0Calibration, portMAX_DELAY);
+
+		calibrationCylinderStart();
+	}
+}
+
 void vTaskCylinder1Calibration(void* pvParameters)
 {
 	while (true) {
@@ -149,6 +188,46 @@ void vTaskCylinder2Calibration(void* pvParameters)
 	}
 }
 
+void vTaskCylinder0Limit(void* pvParameters)
+{
+	int pos;
+	while (true) {
+		xQueueReceive(xQueueCylinder0Limit, &pos, portMAX_DELAY);
+		while (getCylinderStartPos() != pos) {
+			xQueueReceive(xQueueCylinder0Limit, &pos, 0);
+			
+			continue;
+		}
+		stopCylinderStart();
+	}
+}
+void vTaskCylinder1Limit(void* pvParameters)
+{
+	int pos;
+	while (true) {
+		xQueueReceive(xQueueCylinder1Limit, &pos, portMAX_DELAY);
+		while (getCylinder1Pos() != pos) {
+			xQueueReceive(xQueueCylinder1Limit, &pos, 0);
+
+			continue;
+		}
+		stopCylinder1();
+	}
+}
+void vTaskCylinder2Limit(void* pvParameters)
+{
+	int pos;
+	while (true) {
+		xQueueReceive(xQueueCylinder2Limit, &pos, portMAX_DELAY);
+		while (getCylinder2Pos() != pos) {
+			xQueueReceive(xQueueCylinder2Limit, &pos, 0);
+
+			continue;
+		}
+		stopCylinder2();
+	}
+}
+
 void inicializarPortos() {
 	printf("\nwaiting for hardware simulator...");
 	printf("\nReminding: gotoXZ requires kit calibration first...");
@@ -163,11 +242,20 @@ void myDaemonTaskStartupHook(void) {
 	inicializarPortos();
 
 	//Semaforo para iniciar a calibração
-	xSemaphoreCalibration = xSemaphoreCreateCounting(1, 1);
+	xSemaphoreManualCalibration = xSemaphoreCreateCounting(1, 1);
 
 	//Começar semaforos de calibração a 1 para que calibre assim que o programa inicie
-	xSemaphoreCylinder1Calibration = xSemaphoreCreateCounting(1, 1);
-	xSemaphoreCylinder2Calibration = xSemaphoreCreateCounting(1, 1);
+	xSemaphoreCylinder0Calibration = xSemaphoreCreateCounting(1, 0);
+	xSemaphoreCylinder1Calibration = xSemaphoreCreateCounting(1, 0);
+	xSemaphoreCylinder2Calibration = xSemaphoreCreateCounting(1, 0);
+
+	xSemaphoreCylinder0Limit = xSemaphoreCreateCounting(1, 0);
+	xSemaphoreCylinder1Limit = xSemaphoreCreateCounting(1, 0);
+	xSemaphoreCylinder2Limit = xSemaphoreCreateCounting(1, 0);
+
+	xQueueCylinder0Limit = xQueueCreate(1, sizeof(int));
+	xQueueCylinder1Limit = xQueueCreate(1, sizeof(int));
+	xQueueCylinder2Limit = xQueueCreate(1, sizeof(int));
 
 	//Semaforos para saber se é preciso ou não empurrar 
 	xSemaphoreCylinder0 = xSemaphoreCreateCounting(100, 0);
@@ -175,13 +263,19 @@ void myDaemonTaskStartupHook(void) {
 	xSemaphoreCylinder2 = xSemaphoreCreateCounting(100, 0);
 	
 
+	xTaskCreate(vTaskCylinder0Limit, "vTask_Cylinder0Limit", 100, NULL, 0, NULL);
+	xTaskCreate(vTaskCylinder1Limit, "vTask_Cylinder1Limit", 100, NULL, 0, NULL);
+	xTaskCreate(vTaskCylinder2Limit, "vTask_Cylinder2Limit", 100, NULL, 0, NULL);
+
 	xTaskCreate(vTaskPushBlockCylinder0, "vTask_CylinderStart", 100, NULL, 0, NULL);
 	xTaskCreate(vTaskPushBlockCylinder1, "vTask_Cylinder1", 100, NULL, 0, NULL);
 	xTaskCreate(vTaskPushBlockCylinder2, "vTask_Cylinder2", 100, NULL, 0, NULL);
+	
+	xTaskCreate(vTaskCylinder0Calibration, "vTask_Cylinder0Calibration", 100, NULL, 0, NULL);
 	xTaskCreate(vTaskCylinder1Calibration, "vTask_Cylinder1Calibration", 100, NULL, 0, NULL);
 	xTaskCreate(vTaskCylinder2Calibration, "vTask_Cylinder2Calibration", 100, NULL, 0, NULL);
-	xTaskCreate(vTaskCalibrationStart, "vTask_ManualCalibration", 100, NULL, 0, NULL);
-
+	
+	xTaskCreate(vTaskManualCalibrationStart, "vTask_ManualCalibration", 100, NULL, 0, NULL);
 }
 
 void vAssertCalled(unsigned long ulLine, const char* const pcFileName)

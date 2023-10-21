@@ -8,8 +8,8 @@ int getBitValue(uInt8 value, uInt8 bit_n);
 void setBitValue(uInt8* variable, int n_bit, int new_value_bit);
 
 // CylinderStart related functions
-void moveCylinderStartFront();
-void moveCylinderStartBack();
+void moveCylinderStartRight();
+void moveCylinderStartLeft();
 void stopCylinderStart();
 int  getCylinderStartPos();
 void gotoCylinderStart(int pos);

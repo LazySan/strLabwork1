@@ -6,6 +6,12 @@
 #include <semphr.h>
 #include <interrupts.h>
 
+
+#define FRONT 1
+#define BACK 0
+#define LEFT 0
+#define RIGHT 1
+
 int getBitValue(uInt8 value, uInt8 bit_n)
 // given a byte value, returns the value of its bit n
 {
@@ -21,8 +27,9 @@ void setBitValue(uInt8* variable, int n_bit, int new_value_bit)
 	else *variable &= mask_off;
 }
 
-void moveCylinderStartFront()
+void moveCylinderStartRight()
 {
+	if (getCylinderStartPos() == RIGHT) return;
 
 	taskENTER_CRITICAL();
 	uInt8 p = readDigitalU8(2); // read port 2
@@ -36,8 +43,9 @@ void moveCylinderStartFront()
 	taskEXIT_CRITICAL();
 }
 
-void moveCylinderStartBack()
+void moveCylinderStartLeft()
 {
+	if (getCylinderStartPos() == LEFT) return;
 
 	taskENTER_CRITICAL();
 	uInt8 p = readDigitalU8(2); // read port 2
@@ -82,10 +90,10 @@ void gotoCylinderStart(int pos)
 {
 	switch (pos) {
 		case 0:
-			moveCylinderStartBack();
+			moveCylinderStartLeft();
 			break;
 		case 1:
-			moveCylinderStartFront();
+			moveCylinderStartRight();
 			break;
 	}
 	//Enquanto nao chegar à posição, espera
@@ -95,8 +103,21 @@ void gotoCylinderStart(int pos)
 	stopCylinderStart();
 }
 
+void calibrationCylinderStart()
+{
+	moveCylinderStartLeft();
+
+	//Enquanto nao chegar à posição, espera
+	while (getCylinderStartPos() != 0) {
+		continue;
+	};
+	stopCylinderStart();
+}
+
 void moveCylinder1Front()
 {
+	if (getCylinder1Pos() == FRONT) return;
+
 	taskENTER_CRITICAL();
 	uInt8 p = readDigitalU8(2); // read port 2
 
@@ -109,6 +130,8 @@ void moveCylinder1Front()
 
 void moveCylinder1Back()
 {
+	if (getCylinder1Pos() == BACK) return;
+
 	taskENTER_CRITICAL();
 	uInt8 p = readDigitalU8(2); // read port 2
 	taskEXIT_CRITICAL();
@@ -171,6 +194,9 @@ void calibrationCylinder1()
 
 	//Enquanto nao chegar à posição, espera
 	while (getCylinder1Pos() != 0) {
+		if (getCylinder1Pos() == 1) {
+			moveCylinder1Back();
+		}
 		continue;
 	};
 	stopCylinder1();
@@ -178,6 +204,8 @@ void calibrationCylinder1()
 
 void moveCylinder2Front()
 {
+	if (getCylinder2Pos() == FRONT) return;
+
 	taskENTER_CRITICAL();
 	uInt8 p = readDigitalU8(2); // read port 2
 
@@ -190,6 +218,8 @@ void moveCylinder2Front()
 
 void moveCylinder2Back()
 {
+	if (getCylinder2Pos() == BACK) return;
+
 	taskENTER_CRITICAL();
 	uInt8 p = readDigitalU8(2); // read port 2
 	taskEXIT_CRITICAL();
@@ -253,7 +283,10 @@ void calibrationCylinder2()
 
 	//Enquanto nao chegar à posição, espera
 	while (getCylinder2Pos() != 0) {
-		continue;
+		if (getCylinder2Pos() == 1) {
+			moveCylinder2Back();
+		}
+		continue;		
 	};
 	stopCylinder2();
 }
