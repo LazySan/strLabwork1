@@ -19,9 +19,14 @@ extern "C" {
 #define FRONT 1
 #define BACK 0
 
+#define LEFT 0
+#define RIGHT 1
+
 #define mainREGION_1_SIZE   8201
 #define mainREGION_2_SIZE   29905
 #define mainREGION_3_SIZE   7607
+
+xSemaphoreHandle xSemaphoreCalibration;
 
 xSemaphoreHandle xSemaphoreCylinder0;
 xSemaphoreHandle xSemaphoreCylinder1;
@@ -35,25 +40,14 @@ void menu() {
 
 	while (tecla != 27) {
 		tecla = _getch();
-		if (tecla == 'a') {
-			//calibrar
+		if (tecla == 'c') {
+			xSemaphoreGive(xSemaphoreCalibration);
 		}
-		if (tecla == 'd') {
-			//funçao
-		}
-		if (tecla == 'f') {
-			//funçao
-		}
-		if (tecla == 'h') {
-			//funçao
-		}
-		if (tecla == 'j') {
-			//funçao
-		}
-		if (tecla == 'l') {
-			//funçao
-		}				// to complete...
 	}
+}
+
+void vTaskCalibrationStart(void* pvParameters) {
+	//receber inputs do utilizador
 }
 
 void vTaskPushBlockCylinder0(void* pvParameters)
@@ -61,8 +55,8 @@ void vTaskPushBlockCylinder0(void* pvParameters)
 	while (true) {
 		xSemaphoreTake(xSemaphoreCylinder0, portMAX_DELAY);
 
-		gotoCylinderStart(FRONT);
-		gotoCylinderStart(BACK);
+		gotoCylinderStart(RIGHT);
+		gotoCylinderStart(LEFT);		
 	}
 }
 
@@ -118,18 +112,20 @@ void inicializarPortos() {
 void myDaemonTaskStartupHook(void) {
 	inicializarPortos();
 
+	//Semaforo para iniciar a calibração
+	xSemaphoreCalibration = xSemaphoreCreateCounting(1, 0);
 
 	//Começar semaforos de calibração a 1 para que calibre assim que o programa inicie
-	
 	xSemaphoreCylinder1Calibration = xSemaphoreCreateCounting(1, 1);
 	xSemaphoreCylinder2Calibration = xSemaphoreCreateCounting(1, 1);
 
 	//Semaforos para saber se é preciso ou não empurrar 
-	xSemaphoreCylinder0 = xSemaphoreCreateCounting(100, 1);
+	xSemaphoreCylinder0 = xSemaphoreCreateCounting(100, 0);
 	xSemaphoreCylinder1 = xSemaphoreCreateCounting(100, 0);
 	xSemaphoreCylinder2 = xSemaphoreCreateCounting(100, 0);
 	
 
+	xTaskCreate(vTaskPushBlockCylinder0, "vTask_CylinderStart", 100, NULL, 0, NULL);
 	xTaskCreate(vTaskPushBlockCylinder1, "vTask_Cylinder1", 100, NULL, 0, NULL);
 	xTaskCreate(vTaskPushBlockCylinder2, "vTask_Cylinder2", 100, NULL, 0, NULL);
 	xTaskCreate(vTaskCylinder1Calibration, "vTask_Cylinder1Calibration", 100, NULL, 0, NULL);
@@ -199,15 +195,3 @@ int main(int argc, char** argv) {
 	closeChannels();
 
 }
-
-
-// Executar programa: Ctrl + F5 ou Menu Depurar > Iniciar Sem Depuração
-// Depurar programa: F5 ou menu Depurar > Iniciar Depuração
-
-// Dicas para Começar: 
-//   1. Use a janela do Gerenciador de Soluções para adicionar/gerenciar arquivos
-//   2. Use a janela do Team Explorer para conectar-se ao controle do código-fonte
-//   3. Use a janela de Saída para ver mensagens de saída do build e outras mensagens
-//   4. Use a janela Lista de Erros para exibir erros
-//   5. Ir Para o Projeto > Adicionar Novo Item para criar novos arquivos de código, ou Projeto > Adicionar Item Existente para adicionar arquivos de código existentes ao projeto
-//   6. No futuro, para abrir este projeto novamente, vá para Arquivo > Abrir > Projeto e selecione o arquivo. sln
