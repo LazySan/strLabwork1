@@ -120,10 +120,12 @@ void moveCylinder1Front()
 
 	taskENTER_CRITICAL();
 	uInt8 p = readDigitalU8(2); // read port 2
+	taskEXIT_CRITICAL();
 
 	setBitValue(&p, 3, 0); // set bit 0 to low level
 	setBitValue(&p, 4, 1); // set bit 1 to high level
 	
+	taskENTER_CRITICAL();
 	writeDigitalU8(2, p); // update port 2
 	taskEXIT_CRITICAL();
 }
@@ -188,6 +190,15 @@ void gotoCylinder1(int pos)
 	stopCylinder1();
 }
 
+bool isActiveCylinder1Sensor()
+{
+	taskENTER_CRITICAL();
+	uInt8 p0 = readDigitalU8(0);
+	taskEXIT_CRITICAL();
+
+	return (getBitValue(p0, 0));
+}
+
 void calibrationCylinder1()
 {
 	moveCylinder1Front();
@@ -208,10 +219,12 @@ void moveCylinder2Front()
 
 	taskENTER_CRITICAL();
 	uInt8 p = readDigitalU8(2); // read port 2
+	taskEXIT_CRITICAL();
 
 	setBitValue(&p, 5, 0); // set bit 0 to low level
 	setBitValue(&p, 6, 1); // set bit 1 to high level
 	
+	taskENTER_CRITICAL();
 	writeDigitalU8(2, p); // update port 2
 	taskEXIT_CRITICAL();
 }
@@ -289,4 +302,37 @@ void calibrationCylinder2()
 		continue;		
 	};
 	stopCylinder2();
+}
+
+bool isActiveCylinder2Sensor()
+{
+	taskENTER_CRITICAL();
+	uInt8 p1 = readDigitalU8(1);
+	taskEXIT_CRITICAL();
+
+	return (getBitValue(p1, 7));
+}
+
+void moveConveyor() {
+	taskENTER_CRITICAL();
+	uInt8 p = readDigitalU8(2); // read port 2
+	taskEXIT_CRITICAL();
+
+	setBitValue(&p, 2, 1);
+
+	taskENTER_CRITICAL();
+	writeDigitalU8(2, p); // update port 2
+	taskEXIT_CRITICAL();
+}
+
+void stopConveyor() {
+	taskENTER_CRITICAL();
+	uInt8 p = readDigitalU8(2); // read port 2
+	taskEXIT_CRITICAL();
+
+	setBitValue(&p, 2, 0);
+
+	taskENTER_CRITICAL();
+	writeDigitalU8(2, p); // update port 2
+	taskEXIT_CRITICAL();
 }

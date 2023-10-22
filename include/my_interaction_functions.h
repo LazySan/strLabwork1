@@ -22,6 +22,7 @@ void stopCylinder1();
 int  getCylinder1Pos();
 void gotoCylinder1(int pos);
 void calibrationCylinder1();
+bool isActiveCylinder1Sensor();
 
 // Cylinder2 related functions
 void moveCylinder2Front();
@@ -31,5 +32,7 @@ int  getCylinder2Pos();
 void gotoCylinder2(int pos);
 void gotoCylinder2(int pos);
 void calibrationCylinder2();
+bool isActiveCylinder2Sensor();
 
-// Put here the other function headers!!!
+void moveConveyor();
+void stopConveyor();

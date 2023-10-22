@@ -21,13 +21,18 @@ extern "C" {
 #define LEFT 0
 #define RIGHT 1
 
-#define WAITTIME 200
-
 #define mainREGION_1_SIZE   8201
 #define mainREGION_2_SIZE   29905
 #define mainREGION_3_SIZE   7607
 
+xSemaphoreHandle xSemaphoreMenu;
+
 xSemaphoreHandle xSemaphoreManualCalibration;
+
+xSemaphoreHandle xSemaphoreConveyor;
+
+xSemaphoreHandle xSemaphoreInsertBrick;
+xQueueHandle xQueueBrickType;
 
 xQueueHandle xQueueCylinder0Limit;
 xQueueHandle xQueueCylinder1Limit;
@@ -37,35 +42,127 @@ xSemaphoreHandle xSemaphoreCylinder0Limit;
 xSemaphoreHandle xSemaphoreCylinder1Limit;
 xSemaphoreHandle xSemaphoreCylinder2Limit;
 
-xSemaphoreHandle xSemaphoreCylinder0;
-xSemaphoreHandle xSemaphoreCylinder1;
-xSemaphoreHandle xSemaphoreCylinder2;
+xSemaphoreHandle xSemaphoreCylinder0Push;
+xSemaphoreHandle xSemaphoreCylinder1Push;
+xSemaphoreHandle xSemaphoreCylinder2Push;
 
 xSemaphoreHandle xSemaphoreCylinder0Calibration;
 xSemaphoreHandle xSemaphoreCylinder1Calibration;
 xSemaphoreHandle xSemaphoreCylinder2Calibration;
 
-/*
-void menu() {
-	int tecla = 0;
+void vTaskMenu(void* pvParameters) {
 
-	while (tecla != 27) {
+	while (true) {
+
+		xSemaphoreTake(xSemaphoreMenu, portMAX_DELAY);
+
+		int tecla = 0;
+		system("cls");
+		printf("\nMenu");
+		printf("\nc - Calibrar cilindros");
+		printf("\nb - Inserir blocos");
+		printf("\nm - Controlo manual");
+		printf("\nh - Mostrar historico");
+		printf("\ne - Estatistica");
+
 		tecla = _getch();
-		if (tecla == 'c') {
+		switch (tecla) {
+
+		case 'c':			
+			xSemaphoreGive(xSemaphoreCylinder0Calibration);
+			xSemaphoreGive(xSemaphoreCylinder1Calibration);
+			xSemaphoreGive(xSemaphoreCylinder2Calibration);
+			xSemaphoreGive(xSemaphoreMenu);
+
+			break;
+		case 'b':
+			xSemaphoreGive(xSemaphoreInsertBrick);
+			break;
+		case 'm':
 			xSemaphoreGive(xSemaphoreManualCalibration);
+			break;
+		case 'h':
+			printf("\nHISTORICO NAO IMPLEMENTADO");
+			xSemaphoreGive(xSemaphoreMenu);
+			break;
+		case 'e':
+			printf("\nESTATISTICA NAO IMPLEMENTADO");
+			xSemaphoreGive(xSemaphoreMenu);
+			break;
+
+			//IgnorarEsc
+		case 27:
+			printf("\nSaida do programa");
+			exit(1);
+			break;
+
+		default:
+			printf("\nComando nao reconhecido");
+			xSemaphoreGive(xSemaphoreMenu);
+			break;
 		}
 	}
 }
-*/
+
+void vTaskRegisterBrick(void* pvParameters) {
+	
+	while (true) {
+		xSemaphoreTake(xSemaphoreInsertBrick, portMAX_DELAY);
+		char brickType = 0;
+		int message;
+
+		system("cls");
+		printf("\nEspera de blocos:\n");
+		while (brickType != 'q') {
+
+			scanf(" %c", &brickType);
+
+			if (brickType >= '1' && brickType <= '3') {
+
+				message = brickType - '0';
+				xQueueSend(xQueueBrickType, &message, portMAX_DELAY);
+
+			}
+			else {
+				printf("Tipo de bloco nao reconhecido\n");
+			}
+		}
+		xSemaphoreGive(xSemaphoreMenu);
+	}
+}
+
+void vTaskHandleBrick(void* pvParameters) {
+	int brickType;
+	while (true) {
+		xQueueReceive(xQueueBrickType, &brickType, portMAX_DELAY);
+		
+		printf("RECEBI UM BLOCK %d\n", brickType);
+
+		xSemaphoreGive(xSemaphoreCylinder0Push);
+
+		switch (brickType) {
+			case 1:
+				//confirmar que é 1
+
+				xSemaphoreGive(xSemaphoreCylinder1Push);
+				break;
+			case 2:
+				//confirmar que é 2
+
+				xSemaphoreGive(xSemaphoreCylinder2Push);
+				break;
+		}
+	}
+}
 
 void vTaskManualCalibrationStart(void* pvParameters) {
 	
-
 	while (true) {
 
 		xSemaphoreTake(xSemaphoreManualCalibration, portMAX_DELAY);
 		int pos0,pos1,pos2;
 		int tecla = 0;
+		system("cls");
 		printf("\nEntrada em modo manual:");
 
 		while (tecla != 27) {
@@ -127,15 +224,24 @@ void vTaskManualCalibrationStart(void* pvParameters) {
 			}
 		}
 		printf("\nSaida do modo manual:");
+		xSemaphoreGive(xSemaphoreMenu);
 	}
 }
 
+void vTaskConveyor(void* pvParameters) {
+	while (true) {
+		xSemaphoreTake(xSemaphoreConveyor, portMAX_DELAY);
+
+		moveConveyor();
+	}
+}
 void vTaskPushBlockCylinder0(void* pvParameters)
 {
 	while (true) {
-		xSemaphoreTake(xSemaphoreCylinder0, portMAX_DELAY);
+		xSemaphoreTake(xSemaphoreCylinder0Push, portMAX_DELAY);
 
 		gotoCylinderStart(RIGHT);
+		xSemaphoreGive(xSemaphoreConveyor);
 		gotoCylinderStart(LEFT);		
 	}
 }
@@ -143,8 +249,12 @@ void vTaskPushBlockCylinder0(void* pvParameters)
 void vTaskPushBlockCylinder1(void* pvParameters)
 {
 	while (true) {
-		xSemaphoreTake(xSemaphoreCylinder1, portMAX_DELAY);
+		xSemaphoreTake(xSemaphoreCylinder1Push, portMAX_DELAY);
 
+		while (!isActiveCylinder1Sensor()) {
+			continue;
+		}
+		stopConveyor();
 		gotoCylinder1(FRONT);
 		gotoCylinder1(BACK);
 	}
@@ -153,11 +263,13 @@ void vTaskPushBlockCylinder1(void* pvParameters)
 void vTaskPushBlockCylinder2(void* pvParameters)
 {
 	while (true) {
-		xSemaphoreTake(xSemaphoreCylinder2, portMAX_DELAY);
-
+		xSemaphoreTake(xSemaphoreCylinder2Push, portMAX_DELAY);
+		while (!isActiveCylinder2Sensor()) {
+			continue;
+		}
+		stopConveyor();
 		gotoCylinder2(FRONT);
 		gotoCylinder2(BACK);
-
 	}
 }
 
@@ -241,27 +353,42 @@ void inicializarPortos() {
 void myDaemonTaskStartupHook(void) {
 	inicializarPortos();
 
+	//Semaforo para iniciar o menu
+	xSemaphoreMenu = xSemaphoreCreateCounting(1, 1);
+
+	xSemaphoreConveyor = xSemaphoreCreateCounting(1, 0);
+
+	//Queue para armazenar a fila de bricks
+	xQueueBrickType = xQueueCreate(100, sizeof(int));
+	xSemaphoreInsertBrick = xSemaphoreCreateCounting(1, 0);
+
 	//Semaforo para iniciar a calibração
-	xSemaphoreManualCalibration = xSemaphoreCreateCounting(1, 1);
+	xSemaphoreManualCalibration = xSemaphoreCreateCounting(1, 0);
 
 	//Começar semaforos de calibração a 1 para que calibre assim que o programa inicie
-	xSemaphoreCylinder0Calibration = xSemaphoreCreateCounting(1, 0);
-	xSemaphoreCylinder1Calibration = xSemaphoreCreateCounting(1, 0);
-	xSemaphoreCylinder2Calibration = xSemaphoreCreateCounting(1, 0);
+	xSemaphoreCylinder0Calibration = xSemaphoreCreateCounting(1, 1);
+	xSemaphoreCylinder1Calibration = xSemaphoreCreateCounting(1, 1);
+	xSemaphoreCylinder2Calibration = xSemaphoreCreateCounting(1, 1);
 
+	//Semaforos e Queues para manter os cilindros entre os sensores
 	xSemaphoreCylinder0Limit = xSemaphoreCreateCounting(1, 0);
 	xSemaphoreCylinder1Limit = xSemaphoreCreateCounting(1, 0);
 	xSemaphoreCylinder2Limit = xSemaphoreCreateCounting(1, 0);
-
 	xQueueCylinder0Limit = xQueueCreate(1, sizeof(int));
 	xQueueCylinder1Limit = xQueueCreate(1, sizeof(int));
 	xQueueCylinder2Limit = xQueueCreate(1, sizeof(int));
 
 	//Semaforos para saber se é preciso ou não empurrar 
-	xSemaphoreCylinder0 = xSemaphoreCreateCounting(100, 0);
-	xSemaphoreCylinder1 = xSemaphoreCreateCounting(100, 0);
-	xSemaphoreCylinder2 = xSemaphoreCreateCounting(100, 0);
+	xSemaphoreCylinder0Push = xSemaphoreCreateCounting(100, 0);
+	xSemaphoreCylinder1Push = xSemaphoreCreateCounting(100, 0);
+	xSemaphoreCylinder2Push = xSemaphoreCreateCounting(100, 0);
 	
+	xTaskCreate(vTaskMenu, "vTask_Menu", 100, NULL, 0, NULL);
+
+	xTaskCreate(vTaskConveyor, "vTask_Conveyor", 100, NULL, 0, NULL);
+
+	xTaskCreate(vTaskRegisterBrick, "vTask_RegisterBrick", 100, NULL, 0, NULL);
+	xTaskCreate(vTaskHandleBrick, "vTask_HandleBrick", 100, NULL, 0, NULL);
 
 	xTaskCreate(vTaskCylinder0Limit, "vTask_Cylinder0Limit", 100, NULL, 0, NULL);
 	xTaskCreate(vTaskCylinder1Limit, "vTask_Cylinder1Limit", 100, NULL, 0, NULL);
