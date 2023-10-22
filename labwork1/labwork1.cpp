@@ -43,8 +43,8 @@ xSemaphoreHandle xSemaphoreCylinder1Limit;
 xSemaphoreHandle xSemaphoreCylinder2Limit;
 
 xSemaphoreHandle xSemaphoreCylinder0Push;
-xSemaphoreHandle xSemaphoreCylinder1Push;
-xSemaphoreHandle xSemaphoreCylinder2Push;
+xQueueHandle xQueueCylinder1Push;
+xQueueHandle xQueueCylinder2Push;
 
 xSemaphoreHandle xSemaphoreCylinder0Calibration;
 xSemaphoreHandle xSemaphoreCylinder1Calibration;
@@ -103,6 +103,7 @@ void vTaskMenu(void* pvParameters) {
 		}
 	}
 }
+//incrementa semaforo no 2,
 
 void vTaskRegisterBrick(void* pvParameters) {
 	
@@ -133,6 +134,8 @@ void vTaskRegisterBrick(void* pvParameters) {
 
 void vTaskHandleBrick(void* pvParameters) {
 	int brickType;
+	int ignoreCount1 = 0;
+	int ignoreCount2 = 0;
 	while (true) {
 		xQueueReceive(xQueueBrickType, &brickType, portMAX_DELAY);
 		
@@ -144,13 +147,19 @@ void vTaskHandleBrick(void* pvParameters) {
 			case 1:
 				//confirmar que é 1
 
-				xSemaphoreGive(xSemaphoreCylinder1Push);
+				xQueueSend(xQueueCylinder1Push, &ignoreCount1, portMAX_DELAY);
+				ignoreCount1 = 0;
 				break;
 			case 2:
 				//confirmar que é 2
 
-				xSemaphoreGive(xSemaphoreCylinder2Push);
+				ignoreCount1++;
+				xQueueSend(xQueueCylinder2Push, &ignoreCount2, portMAX_DELAY);
+				ignoreCount2 = 0;
 				break;
+			case 3:
+				ignoreCount1++;
+				ignoreCount2++;
 		}
 	}
 }
@@ -241,35 +250,57 @@ void vTaskPushBlockCylinder0(void* pvParameters)
 		xSemaphoreTake(xSemaphoreCylinder0Push, portMAX_DELAY);
 
 		gotoCylinderStart(RIGHT);
-		xSemaphoreGive(xSemaphoreConveyor);
 		gotoCylinderStart(LEFT);		
 	}
 }
 
 void vTaskPushBlockCylinder1(void* pvParameters)
 {
+	int ignoreCount;
 	while (true) {
-		xSemaphoreTake(xSemaphoreCylinder1Push, portMAX_DELAY);
-
-		while (!isActiveCylinder1Sensor()) {
-			continue;
+		xQueueReceive(xQueueCylinder1Push, &ignoreCount, portMAX_DELAY);
+		printf("1. Vou ignorar %d blocos\n", ignoreCount);
+		while (ignoreCount >= 0) {
+			while (!isActiveCylinder1Sensor()) {
+				continue;
+			}
+			if (ignoreCount <= 0) {
+				stopConveyor();
+				gotoCylinder1(FRONT);
+				gotoCylinder1(BACK);
+				xSemaphoreGive(xSemaphoreConveyor);
+			}
+			printf("1. Ignorei\n");
+			ignoreCount--;		
+			while (isActiveCylinder1Sensor()) {
+				continue;
+			}
 		}
-		stopConveyor();
-		gotoCylinder1(FRONT);
-		gotoCylinder1(BACK);
 	}
 }
 
 void vTaskPushBlockCylinder2(void* pvParameters)
 {
+	int ignoreCount;
 	while (true) {
-		xSemaphoreTake(xSemaphoreCylinder2Push, portMAX_DELAY);
-		while (!isActiveCylinder2Sensor()) {
-			continue;
+		xQueueReceive(xQueueCylinder2Push, &ignoreCount, portMAX_DELAY);
+		printf("2. Vou ignorar %d blocos\n", ignoreCount);
+		while (ignoreCount >= 0) {
+			while (!isActiveCylinder2Sensor()) {
+				continue;
+			}
+			if (ignoreCount <= 0) {
+				stopConveyor();
+				gotoCylinder2(FRONT);
+				gotoCylinder2(BACK);
+				xSemaphoreGive(xSemaphoreConveyor);
+			}
+			printf("2. Ignorei\n");
+			ignoreCount--;
+			while (isActiveCylinder2Sensor()) {
+				continue;
+			}
 		}
-		stopConveyor();
-		gotoCylinder2(FRONT);
-		gotoCylinder2(BACK);
 	}
 }
 
@@ -356,7 +387,7 @@ void myDaemonTaskStartupHook(void) {
 	//Semaforo para iniciar o menu
 	xSemaphoreMenu = xSemaphoreCreateCounting(1, 1);
 
-	xSemaphoreConveyor = xSemaphoreCreateCounting(1, 0);
+	xSemaphoreConveyor = xSemaphoreCreateCounting(1, 1);
 
 	//Queue para armazenar a fila de bricks
 	xQueueBrickType = xQueueCreate(100, sizeof(int));
@@ -380,8 +411,8 @@ void myDaemonTaskStartupHook(void) {
 
 	//Semaforos para saber se é preciso ou não empurrar 
 	xSemaphoreCylinder0Push = xSemaphoreCreateCounting(100, 0);
-	xSemaphoreCylinder1Push = xSemaphoreCreateCounting(100, 0);
-	xSemaphoreCylinder2Push = xSemaphoreCreateCounting(100, 0);
+	xQueueCylinder1Push = xQueueCreate(100, sizeof(int));
+	xQueueCylinder2Push = xQueueCreate(100, sizeof(int));
 	
 	xTaskCreate(vTaskMenu, "vTask_Menu", 100, NULL, 0, NULL);
 
