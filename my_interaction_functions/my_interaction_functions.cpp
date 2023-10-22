@@ -29,7 +29,7 @@ void setBitValue(uInt8* variable, int n_bit, int new_value_bit)
 
 void moveCylinderStartRight()
 {
-	if (getCylinderStartPos() == RIGHT) return;
+	//Retirei o if daqui para ele conseguir ir um bocadinho de nada mais à frente
 
 	taskENTER_CRITICAL();
 	uInt8 p = readDigitalU8(2); // read port 2
@@ -331,6 +331,51 @@ void stopConveyor() {
 	taskEXIT_CRITICAL();
 
 	setBitValue(&p, 2, 0);
+
+	taskENTER_CRITICAL();
+	writeDigitalU8(2, p); // update port 2
+	taskEXIT_CRITICAL();
+}
+
+bool isActiveUpBrickSensor()
+{
+	taskENTER_CRITICAL();
+	uInt8 p1 = readDigitalU8(1);
+	taskEXIT_CRITICAL();
+
+	return(getBitValue(p1, 6));
+}
+
+bool isActiveDownBrickSensor()
+{
+	taskENTER_CRITICAL();
+	uInt8 p1 = readDigitalU8(1);
+	taskEXIT_CRITICAL();
+
+	return(getBitValue(p1, 5));
+}
+
+void turnOnFlashingLamp() {
+	taskENTER_CRITICAL();
+	uInt8 p = readDigitalU8(2); // read port 2
+	taskEXIT_CRITICAL();
+
+	setBitValue(&p, 7, 1);
+
+	taskENTER_CRITICAL();
+	writeDigitalU8(2, p); // update port 2
+	taskEXIT_CRITICAL();
+
+
+
+}
+
+void turnOffFlashingLamp() {
+	taskENTER_CRITICAL();
+	uInt8 p = readDigitalU8(2); // read port 2
+	taskEXIT_CRITICAL();
+
+	setBitValue(&p, 7, 0);
 
 	taskENTER_CRITICAL();
 	writeDigitalU8(2, p); // update port 2

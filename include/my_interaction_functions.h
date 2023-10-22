@@ -36,3 +36,9 @@ bool isActiveCylinder2Sensor();
 
 void moveConveyor();
 void stopConveyor();
+
+bool isActiveUpBrickSensor();
+bool isActiveDownBrickSensor();
+
+void turnOnFlashingLamp();
+void turnOffFlashingLamp();
