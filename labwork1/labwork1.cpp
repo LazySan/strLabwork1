@@ -21,9 +21,6 @@ extern "C" {
 #define LEFT 0
 #define RIGHT 1
 
-#define TIMEFIRSTSENSOR 150
-#define TIMEBETWEENSENSORS 150
-
 #define mainREGION_1_SIZE   8201
 #define mainREGION_2_SIZE   29905
 #define mainREGION_3_SIZE   7607
@@ -266,12 +263,9 @@ void vTaskHandleConfirmedBrick(void* pvParameters) {
 	while (true) {
 		xQueueReceive(xQueueBrickType, &brickType, portMAX_DELAY);
 
-		//printf("BRICK ESPERADO %d\n", brickType);
-
 		xSemaphoreGive(xSemaphoreCylinder0Push);
 		xQueueReceive(xQueueConfirmedBrickType, &confirmedBrickType, portMAX_DELAY);
 
-		//printf("BRICK RECEBIDO %d\n", confirmedBrickType);
 		switch (brickType) {
 		case 1:
 			if (confirmedBrickType != 1) {
@@ -575,38 +569,31 @@ void inicializarPortos() {
 }
 
 void myDaemonTaskStartupHook(void) {
+	
 	inicializarPortos();
 
-	//Semaforo para iniciar o menu
+	//**********************************************************************************
+	//MENUS
 	xSemaphoreMenu = xSemaphoreCreateCounting(1, 1);
 
-	xSemaphoreConveyor = xSemaphoreCreateCounting(1, 1);
-
-	//Queue para armazenar a fila de bricks
+	//INSERIR BLOCOS
 	xQueueBrickType = xQueueCreate(100, sizeof(int));
 	xSemaphoreInsertBrick = xSemaphoreCreateCounting(1, 0);
-
-	xSemaphoreFlashingLamp = xSemaphoreCreateCounting(1, 0);
-
+	xSemaphoreStartBrickVerification = xSemaphoreCreateCounting(1, 0);
+	xSemaphoreEndBrickVerification = xSemaphoreCreateCounting(1, 0);
 	xQueueConfirmedBrickType = xQueueCreate(100, sizeof(int));
-
 	xQueueBrickPassedCylinder1 = xQueueCreate(1, sizeof(int));
 	xQueueBrickPassedCylinder2 = xQueueCreate(1, sizeof(int));
 	xSemaphoreGetBlockCountCylinder1 = xSemaphoreCreateCounting(1, 0);
 	xSemaphoreGetBlockCountCylinder2 = xSemaphoreCreateCounting(1, 0);
-
 	xSemaphoreBlockBrickCountCylinder1 = xSemaphoreCreateCounting(1, 0);
 	xSemaphoreBlockBrickCountCylinder2 = xSemaphoreCreateCounting(1, 0);
 	xSemaphoreResumeBrickCountCylinder1 = xSemaphoreCreateCounting(1, 0);
 	xSemaphoreResumeBrickCountCylinder2 = xSemaphoreCreateCounting(1, 0);
 
-	xSemaphoreStartBrickVerification = xSemaphoreCreateCounting(1, 0);
-	xSemaphoreEndBrickVerification = xSemaphoreCreateCounting(1, 0);
-
-	//Semaforo para iniciar a calibração
+	//CALIBRAÇÃO
 	xSemaphoreManualCalibration = xSemaphoreCreateCounting(1, 0);
-
-	//Começar semaforos de calibração a 1 para que calibre assim que o programa inicie
+	//CALIBRAÇÃO (Começa a 1 para calibrar no inicio)
 	xSemaphoreCylinder0Calibration = xSemaphoreCreateCounting(1, 1);
 	xSemaphoreCylinder1Calibration = xSemaphoreCreateCounting(1, 1);
 	xSemaphoreCylinder2Calibration = xSemaphoreCreateCounting(1, 1);
@@ -619,40 +606,51 @@ void myDaemonTaskStartupHook(void) {
 	xQueueCylinder1Limit = xQueueCreate(1, sizeof(int));
 	xQueueCylinder2Limit = xQueueCreate(1, sizeof(int));
 
-
 	//Semaforos para saber se é preciso ou não empurrar 
 	xSemaphoreCylinder0Push = xSemaphoreCreateCounting(100, 0);
 	xQueueCylinder1Push = xQueueCreate(100, sizeof(int));
 	xQueueCylinder2Push = xQueueCreate(100, sizeof(int));
 
+	//TOGGLES
+	xSemaphoreConveyor = xSemaphoreCreateCounting(1, 1);
+	xSemaphoreFlashingLamp = xSemaphoreCreateCounting(1, 0);
+
+	//**********************************************************************************
+	//MENUS
 	xTaskCreate(vTaskMenu, "vTask_Menu", 100, NULL, 0, NULL);
 
-	xTaskCreate(vTaskConveyor, "vTask_Conveyor", 100, NULL, 0, NULL);
+	//CALIBRAÇÃO MANUAL
+	xTaskCreate(vTaskManualCalibrationStart, "vTask_ManualCalibration", 100, NULL, 0, NULL);
 
-	xTaskCreate(vTaskFlashingLamp, "vTask_FlashingLamp", 100, NULL, 0, NULL);
-
+	//INSERIR BLOCOS
 	xTaskCreate(vTaskRegisterBrick, "vTask_RegisterBrick", 100, NULL, 0, NULL);
 	xTaskCreate(vTaskHandleConfirmedBrick, "vTask_HandleBrick", 100, NULL, 0, NULL);
 
+	//CONTADOR DE BLOCOS (Para saber quanto tem que ignorar)
 	xTaskCreate(vTaskGetPassBlockCylinder1, "vTask_GetPassBlockCylinder1", 100, NULL, 0, NULL);
 	xTaskCreate(vTaskGetPassBlockCylinder2, "vTask_GetPassBlockCylinder2", 100, NULL, 0, NULL);
-
+	//DETEÇÃO DE BLOCOS
 	xTaskCreate(vTaskBrickSensors, "vTask_BrickSensors", 100, NULL, 0, NULL);
 
+	//LIMITAR CILINDROS ENTRE SENSORES
 	xTaskCreate(vTaskCylinder0Limit, "vTask_Cylinder0Limit", 100, NULL, 0, NULL);
 	xTaskCreate(vTaskCylinder1Limit, "vTask_Cylinder1Limit", 100, NULL, 0, NULL);
 	xTaskCreate(vTaskCylinder2Limit, "vTask_Cylinder2Limit", 100, NULL, 0, NULL);
 
+	//TOGGLES 
+	xTaskCreate(vTaskConveyor, "vTask_Conveyor", 100, NULL, 0, NULL);
+	xTaskCreate(vTaskFlashingLamp, "vTask_FlashingLamp", 100, NULL, 0, NULL);
 	xTaskCreate(vTaskPushBlockCylinder0, "vTask_CylinderStart", 100, NULL, 0, NULL);
 	xTaskCreate(vTaskPushBlockCylinder1, "vTask_Cylinder1", 100, NULL, 0, NULL);
 	xTaskCreate(vTaskPushBlockCylinder2, "vTask_Cylinder2", 100, NULL, 0, NULL);
 
+	//CALIBRAÇÃO
 	xTaskCreate(vTaskCylinder0Calibration, "vTask_Cylinder0Calibration", 100, NULL, 0, NULL);
 	xTaskCreate(vTaskCylinder1Calibration, "vTask_Cylinder1Calibration", 100, NULL, 0, NULL);
 	xTaskCreate(vTaskCylinder2Calibration, "vTask_Cylinder2Calibration", 100, NULL, 0, NULL);
 
-	xTaskCreate(vTaskManualCalibrationStart, "vTask_ManualCalibration", 100, NULL, 0, NULL);
-}
+	//**********************************************************************************
+	}
 
 void vAssertCalled(unsigned long ulLine, const char* const pcFileName)
 {
