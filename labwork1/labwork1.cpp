@@ -25,7 +25,7 @@ extern "C" {
 #define mainREGION_2_SIZE   29905
 #define mainREGION_3_SIZE   7607
 
-#define PATH "C:\str\Historic.txt"
+#define PATH "C:/str/historic.txt"
 
 xSemaphoreHandle xSemaphoreMenu;
 
@@ -73,6 +73,8 @@ xSemaphoreHandle xSemaphoreCylinder0Calibration;
 xSemaphoreHandle xSemaphoreCylinder1Calibration;
 xSemaphoreHandle xSemaphoreCylinder2Calibration;
 
+xSemaphoreHandle xSemaphoreShowHistoric;
+
 xQueueHandle xQueueSaveBrick;
 
 xTaskHandle emergencyTask;
@@ -100,7 +102,7 @@ void vTaskMenu(void* pvParameters) {
 		printf("\nm - Controlo manual");
 		printf("\nh - Mostrar historico");
 		printf("\ne - Estatistica");
-
+			
 		tecla = _getch();
 		switch (tecla) {
 
@@ -118,8 +120,7 @@ void vTaskMenu(void* pvParameters) {
 			xSemaphoreGive(xSemaphoreManualCalibration);
 			break;
 		case 'h':
-			printf("\nHISTORICO NAO IMPLEMENTADO");
-			xSemaphoreGive(xSemaphoreMenu);
+			xSemaphoreGive(xSemaphoreShowHistoric);
 			break;
 		case 'e':
 			printf("\nESTATISTICA NAO IMPLEMENTADO");
@@ -285,7 +286,7 @@ void vTaskHandleConfirmedBrick(void* pvParameters) {
 		//GET CURRENT TIME
 		time_t t = time(NULL);
 		
-		newbrick.type = brickType;
+		newbrick.type = confirmedBrickType;
 		newbrick.rejected = false;
 		newbrick.date = *localtime(&t);
 
@@ -603,36 +604,64 @@ void vTaskCylinder2Limit(void* pvParameters)
 }
 
 void vTaskSaveBrickFile(void* pvParameters) {
-	FILE* fptr;
-	char c;
-	fptr = fopen(PATH, "w");
+	FILE* fp;
+
 	brick brickToSave;
 	struct tm tm; //Struct para definir o tempo
-
-
-
+	char rejected[3];
 	while (true)
 	{
 		xQueueReceive(xQueueSaveBrick, &brickToSave, portMAX_DELAY);
+		fp = fopen(PATH, "a+");
 
-		if (fptr == NULL) {
+		if (fp == NULL) {
 			printf("Error opening file, couldn't save current brick\n");
 		}
-
 		tm = brickToSave.date;
-		fprintf(fptr, "%d\t%B\t%d-%02d-%02d %02d:%02d:%02d\n", brickToSave.type, 
-			brickToSave.rejected, 
+
+		if (brickToSave.rejected)
+			strcpy(rejected, "YES");
+		else
+			strcpy(rejected, "NO");
+
+		fprintf(fp, "%d\t%s\t%d-%02d-%02d %02d:%02d:%02d\n", brickToSave.type, 
+			rejected, 
 			tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
-		printf("bloco salvo");
+		fclose(fp);
 	}
 }
 
+void vTaskShowHistoric(void* pvParameters) {
+	FILE* fp;
+	char c;
+	int tecla = 0;
+	while (true) {
+		xSemaphoreTake(xSemaphoreShowHistoric,portMAX_DELAY);
+
+		system("cls");
+		fp = fopen(PATH, "r");
+
+		c = fgetc(fp);
+		while (c != EOF)
+		{
+			printf("%c", c);
+			c = fgetc(fp);
+		}
+		printf("Press ESC to exit");
+		
+		while (tecla != 27) {
+			tecla = _getch();
+		}
+		xSemaphoreGive(xSemaphoreMenu);
+	}
+
+}
 void vTaskEmergency(void* pvParameters)
 {
 	while (true) {
 		vTaskSuspend(NULL);
 		printf("\nENTERED EMERGENCY MODE\n");
-		vTaskSuspend(taskHandle);
+		//vTaskSuspend(taskHandle);
 		//xSemaphoreGive(xSemaphoreFlashingLampEmergency);
 	}
 }void vTaskResumeEmergency(void* pvParameters)
@@ -720,6 +749,7 @@ void myDaemonTaskStartupHook(void) {
 
 	//HISTORICO
 	xQueueSaveBrick = xQueueCreate(100, sizeof(brick));
+	xSemaphoreShowHistoric = xSemaphoreCreateCounting(1, 0);
 
 	//TOGGLES
 	xSemaphoreConveyor = xSemaphoreCreateCounting(1, 1);
@@ -763,6 +793,8 @@ void myDaemonTaskStartupHook(void) {
 	xTaskCreate(vTaskCylinder0Calibration, "vTask_Cylinder0Calibration", 100, NULL, 0, &taskHandle);
 	xTaskCreate(vTaskCylinder1Calibration, "vTask_Cylinder1Calibration", 100, NULL, 0, &taskHandle);
 	xTaskCreate(vTaskCylinder2Calibration, "vTask_Cylinder2Calibration", 100, NULL, 0, &taskHandle);
+
+	xTaskCreate(vTaskShowHistoric, "vTask_ShowHistoric", 100, NULL, 0, &taskHandle);
 	
 	xTaskCreate(vTaskEmergency, "vTask_Emergency", 100, NULL, 0, &emergencyTask);
 	xTaskCreate(vTaskResumeEmergency, "vTask_ResumeEmergency", 100, NULL, 0, &resumeTask);
