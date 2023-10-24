@@ -73,7 +73,9 @@ xSemaphoreHandle xSemaphoreCylinder0Calibration;
 xSemaphoreHandle xSemaphoreCylinder1Calibration;
 xSemaphoreHandle xSemaphoreCylinder2Calibration;
 
-xSemaphoreHandle xSemaphoreShowHistoric;
+xSemaphoreHandle xSemaphoreShowHistoricMenu;
+xSemaphoreHandle xSemaphoreShowHistoricAll;
+xQueueHandle xQueueShowHistoricSpecific;
 
 xQueueHandle xQueueSaveBrick;
 
@@ -120,7 +122,7 @@ void vTaskMenu(void* pvParameters) {
 			xSemaphoreGive(xSemaphoreManualCalibration);
 			break;
 		case 'h':
-			xSemaphoreGive(xSemaphoreShowHistoric);
+			xSemaphoreGive(xSemaphoreShowHistoricMenu);
 			break;
 		case 'e':
 			printf("\nESTATISTICA NAO IMPLEMENTADO");
@@ -134,7 +136,6 @@ void vTaskMenu(void* pvParameters) {
 			break;
 
 		default:
-			printf("\nComando nao reconhecido");
 			xSemaphoreGive(xSemaphoreMenu);
 			break;
 		}
@@ -215,11 +216,12 @@ void vTaskManualCalibrationStart(void* pvParameters) {
 }
 
 void vTaskRegisterBrick(void* pvParameters) {
+	char brickType = 0;
+	int message;
 
 	while (true) {
 		xSemaphoreTake(xSemaphoreInsertBrick, portMAX_DELAY);
-		char brickType = 0;
-		int message;
+		brickType = 0;
 
 		system("cls");
 		printf("\nEspera de blocos:\n");
@@ -612,7 +614,7 @@ void vTaskSaveBrickFile(void* pvParameters) {
 	while (true)
 	{
 		xQueueReceive(xQueueSaveBrick, &brickToSave, portMAX_DELAY);
-		fp = fopen(PATH, "a+");
+		fp = fopen(PATH, "a");
 
 		if (fp == NULL) {
 			printf("Error opening file, couldn't save current brick\n");
@@ -632,12 +634,47 @@ void vTaskSaveBrickFile(void* pvParameters) {
 	}
 }
 
+void vTaskHistoricMenu(void* pvParameters) {
+	int tecla = 0;
+	int brickType;
+
+	while (true) {
+		xSemaphoreTake(xSemaphoreShowHistoricMenu,portMAX_DELAY);
+		tecla = 0;
+		system("cls");
+		printf("1 - Mostrar blocos do tipo 1\n");
+		printf("2 - Mostrar blocos do tipo 2\n");
+		printf("3 - Mostrar blocos do tipo 3\n");
+		printf("t - Mostrar todos os blocos\n");
+
+		tecla = _getch();
+		switch (tecla) {
+			case 't':
+				xSemaphoreGive(xSemaphoreShowHistoricAll);
+				break;
+			case '1':
+			case '2':
+			case '3':
+				brickType = tecla - '0';
+				xQueueSend(xQueueShowHistoricSpecific, &brickType, portMAX_DELAY);
+				break;
+			case 27: //esc
+				xSemaphoreGive(xSemaphoreMenu);
+				break;
+			default:
+				xSemaphoreGive(xSemaphoreShowHistoricMenu);
+		}
+	}
+}
+
 void vTaskShowHistoric(void* pvParameters) {
 	FILE* fp;
 	char c;
 	int tecla = 0;
 	while (true) {
-		xSemaphoreTake(xSemaphoreShowHistoric,portMAX_DELAY);
+
+		xSemaphoreTake(xSemaphoreShowHistoricAll,portMAX_DELAY);
+		tecla = 0;
 
 		system("cls");
 		fp = fopen(PATH, "r");
@@ -653,35 +690,53 @@ void vTaskShowHistoric(void* pvParameters) {
 		while (tecla != 27) {
 			tecla = _getch();
 		}
-		xSemaphoreGive(xSemaphoreMenu);
+		xSemaphoreGive(xSemaphoreShowHistoricMenu);
 	}
 
 }
 
 void vTaskShowBlockHistoric(void* pvParameters) {
 	FILE* fp;
-	char c;
 	int tecla = 0;
+	int brickType;
+	char rejected[4] = {0};
+	bool rejectedCount=0;
+	int brickCount = 0;
+	int finished = 0;
 	while (true) {
-		//semaforo errado
-		//xSemaphoreTake(xSemaphoreShowHistoric, portMAX_DELAY);
+		xQueueReceive(xQueueShowHistoricSpecific, &brickType, portMAX_DELAY);
+		brickCount = 0;
+		rejectedCount = 0;
 
 		system("cls");
+
 		fp = fopen(PATH, "r");
 
 		int bufferLength = 127;
 		char buffer[127];
-		char brickType=0;
-		while (brickType >= '1' && brickType <= '3') {
-			brickType = getch();
-		}
 		while (fgets(buffer, bufferLength, fp)) {
-			brickType = _getch();
-			if (buffer[0] == brickType) {
-				//contar rejeitados e nao rejeitas e tal
+			if (buffer[0] == brickType + '0') {
+				printf("%s", buffer);
+				brickCount++;
+				//asterisco quer dizer que não vai ser guardado na variável
+				sscanf(buffer,"%*d\t%3s\t%*d-%*02d-%*02d %*02d:%*02d:%*02d\n", &rejected);
+				if (!strcmp(rejected, "YES")) {
+					rejectedCount++;
+				}
+
 			}
 		}
-		xSemaphoreGive(xSemaphoreMenu);
+		printf("\nBlocos do tipo %d colocados: %d\n", brickType, brickCount);
+		printf("Blocos do tipo %d aceites: %d\n", brickType, brickCount - rejectedCount);
+		printf("Blocos do tipo %d rejeitados: %d\n", brickType, rejectedCount);
+
+		fclose(fp);
+		printf("Press ESC to exit");
+		tecla = 0;
+		while (tecla != 27) {
+			tecla = _getch();
+		}
+		xSemaphoreGive(xSemaphoreShowHistoricMenu);
 	}
 }
 
@@ -778,7 +833,9 @@ void myDaemonTaskStartupHook(void) {
 
 	//HISTORICO
 	xQueueSaveBrick = xQueueCreate(100, sizeof(brick));
-	xSemaphoreShowHistoric = xSemaphoreCreateCounting(1, 0);
+	xSemaphoreShowHistoricMenu = xSemaphoreCreateCounting(1, 0);
+	xSemaphoreShowHistoricAll = xSemaphoreCreateCounting(1, 0);
+	xQueueShowHistoricSpecific = xQueueCreate(1, sizeof(int));
 
 	//TOGGLES
 	xSemaphoreConveyor = xSemaphoreCreateCounting(1, 1);
@@ -824,6 +881,8 @@ void myDaemonTaskStartupHook(void) {
 	xTaskCreate(vTaskCylinder2Calibration, "vTask_Cylinder2Calibration", 100, NULL, 0, &taskHandle);
 
 	xTaskCreate(vTaskShowHistoric, "vTask_ShowHistoric", 100, NULL, 0, &taskHandle);
+	xTaskCreate(vTaskHistoricMenu, "vTask_HistoricMenu", 100, NULL, 0, &taskHandle);
+	xTaskCreate(vTaskShowBlockHistoric, "vTask_ShowBlockHistoric", 100, NULL, 0, &taskHandle);
 	
 	xTaskCreate(vTaskEmergency, "vTask_Emergency", 100, NULL, 0, &emergencyTask);
 	xTaskCreate(vTaskResumeEmergency, "vTask_ResumeEmergency", 100, NULL, 0, &resumeTask);
