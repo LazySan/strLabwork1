@@ -365,9 +365,6 @@ void turnOnFlashingLamp() {
 	taskENTER_CRITICAL();
 	writeDigitalU8(2, p); // update port 2
 	taskEXIT_CRITICAL();
-
-
-
 }
 
 void turnOffFlashingLamp() {

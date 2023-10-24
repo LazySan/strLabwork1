@@ -1,3 +1,9 @@
 ﻿  labwork1.cpp
+C:\str\labwork1\labwork1.cpp(608,15): warning C4129: 's': sequência de escape de caractere não reconhecida
+C:\str\labwork1\labwork1.cpp(608,15): warning C4129: 'H': sequência de escape de caractere não reconhecida
+C:\str\labwork1\labwork1.cpp(623,17): warning C4476: 'fprintf': tipo desconhecido de caractere de campo 'B' no especificador de formato
+C:\str\labwork1\labwork1.cpp(625,75): warning C4474: 'fprintf': excesso de argumentos transmitidos para cadeia de caracteres de formato
+C:\str\labwork1\labwork1.cpp(625,75): message : espaços reservados e seus parâmetros esperam 7 argumentos variadic, mas 8 foram fornecidos
+C:\str\labwork1\labwork1.cpp(607,7): warning C4101: 'c': variável local não referenciada
 freeRTOS.lib(main.obj) : warning LNK4099: PDB '' não foi encontrado 'freeRTOS.lib(main.obj)' ou no ''; vinculando objeto quando quando sem nenhuma informação de depuração
   labwork1.vcxproj -> C:\str\labwork1\Debug\labwork1.exe
