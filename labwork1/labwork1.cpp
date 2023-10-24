@@ -608,7 +608,7 @@ void vTaskSaveBrickFile(void* pvParameters) {
 
 	brick brickToSave;
 	struct tm tm; //Struct para definir o tempo
-	char rejected[3];
+	char rejected[4];
 	while (true)
 	{
 		xQueueReceive(xQueueSaveBrick, &brickToSave, portMAX_DELAY);
@@ -616,6 +616,7 @@ void vTaskSaveBrickFile(void* pvParameters) {
 
 		if (fp == NULL) {
 			printf("Error opening file, couldn't save current brick\n");
+			break;
 		}
 		tm = brickToSave.date;
 
@@ -656,6 +657,34 @@ void vTaskShowHistoric(void* pvParameters) {
 	}
 
 }
+
+void vTaskShowBlockHistoric(void* pvParameters) {
+	FILE* fp;
+	char c;
+	int tecla = 0;
+	while (true) {
+		//semaforo errado
+		//xSemaphoreTake(xSemaphoreShowHistoric, portMAX_DELAY);
+
+		system("cls");
+		fp = fopen(PATH, "r");
+
+		int bufferLength = 127;
+		char buffer[127];
+		char brickType=0;
+		while (brickType >= '1' && brickType <= '3') {
+			brickType = getch();
+		}
+		while (fgets(buffer, bufferLength, fp)) {
+			brickType = _getch();
+			if (buffer[0] == brickType) {
+				//contar rejeitados e nao rejeitas e tal
+			}
+		}
+		xSemaphoreGive(xSemaphoreMenu);
+	}
+}
+
 void vTaskEmergency(void* pvParameters)
 {
 	while (true) {
