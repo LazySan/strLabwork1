@@ -378,3 +378,16 @@ void turnOffFlashingLamp() {
 	writeDigitalU8(2, p); // update port 2
 	taskEXIT_CRITICAL();
 }
+
+uInt8 GetP2() {
+	taskENTER_CRITICAL();
+	uInt8 p = readDigitalU8(2); // read port 2
+	taskEXIT_CRITICAL();
+
+	return p;
+}
+void ModifyP2(uInt8 p) {
+	taskENTER_CRITICAL();
+	writeDigitalU8(2, p); // write port 2
+	taskEXIT_CRITICAL();
+}

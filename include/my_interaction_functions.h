@@ -42,3 +42,6 @@ bool isActiveDownBrickSensor();
 
 void turnOnFlashingLamp();
 void turnOffFlashingLamp();
+
+uInt8 GetP2();
+void ModifyP2(uInt8 p);

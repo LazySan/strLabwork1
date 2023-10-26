@@ -25,6 +25,8 @@ extern "C" {
 #define mainREGION_2_SIZE   29905
 #define mainREGION_3_SIZE   7607
 
+#define WAIT_TIME_CYLINDER0   25
+
 #define PATH "C:/str/historic.txt"
 
 xSemaphoreHandle xSemaphoreMenu;
@@ -73,16 +75,50 @@ xSemaphoreHandle xSemaphoreCylinder0Calibration;
 xSemaphoreHandle xSemaphoreCylinder1Calibration;
 xSemaphoreHandle xSemaphoreCylinder2Calibration;
 
+xSemaphoreHandle xSemaphoreConveyorIsClear;
+
 xSemaphoreHandle xSemaphoreShowHistoricMenu;
 xSemaphoreHandle xSemaphoreShowHistoricAll;
 xQueueHandle xQueueShowHistoricSpecific;
 
 xQueueHandle xQueueSaveBrick;
 
+xQueueHandle xQueueSavePort2;
+
 xTaskHandle emergencyTask;
 xTaskHandle resumeTask;
-xTaskHandle tasksToRunWhileEmergency;
-xTaskHandle taskHandle;
+xTaskHandle blinkLight;
+xTaskHandle restartSystem;
+
+xTaskHandle taskHandle0;
+xTaskHandle taskHandle1;
+xTaskHandle taskHandle2;
+xTaskHandle taskHandle3;
+xTaskHandle taskHandle4;
+xTaskHandle taskHandle5;
+xTaskHandle taskHandle6;
+xTaskHandle taskHandle7;
+xTaskHandle taskHandle8;
+xTaskHandle taskHandle9;
+xTaskHandle taskHandle10;
+xTaskHandle taskHandle11;
+xTaskHandle taskHandle12;
+xTaskHandle taskHandle13;
+xTaskHandle taskHandle14;
+xTaskHandle taskHandle15;
+xTaskHandle taskHandle16;
+xTaskHandle taskHandle17;
+xTaskHandle taskHandle18;
+xTaskHandle taskHandle19;
+xTaskHandle taskHandle20;
+xTaskHandle taskHandle21;
+xTaskHandle taskHandle22;
+xTaskHandle taskHandle23;
+xTaskHandle taskHandle24;
+xTaskHandle taskHandle25;
+xTaskHandle taskHandle26;
+xTaskHandle taskHandle27;
+xTaskHandle taskHandle28;
 
 struct brick {
 	int type;
@@ -279,6 +315,7 @@ void vTaskHandleConfirmedBrick(void* pvParameters) {
 	int ignoreCount1 = 0;
 	int ignoreCount2 = 0;
 	brick newbrick;
+	time_t t;
 	while (true) {
 		xQueueReceive(xQueueBrickType, &brickType, portMAX_DELAY);
 
@@ -286,7 +323,7 @@ void vTaskHandleConfirmedBrick(void* pvParameters) {
 		xQueueReceive(xQueueConfirmedBrickType, &confirmedBrickType, portMAX_DELAY);
 		
 		//GET CURRENT TIME
-		time_t t = time(NULL);
+		t = time(NULL);
 		
 		newbrick.type = confirmedBrickType;
 		newbrick.rejected = false;
@@ -378,7 +415,7 @@ void vTaskFlashingLampDeniedBlock(void* pvParameters) {
 		xSemaphoreTake(xSemaphoreFlashingLampDeniedBlock, portMAX_DELAY);
 
 		turnOnFlashingLamp();
-		vTaskDelay(3000);
+		Sleep(3000);
 		//Ligar durante 3 segundos
 		turnOffFlashingLamp();
 	}
@@ -391,11 +428,10 @@ void vTaskFlashingLampEmergency(void* pvParameters) {
 
 		while (!xSemaphoreTake(xSemaphoreStopFlashingLampEmergency, 0)) {
 			turnOnFlashingLamp();
-			vTaskDelay(500);
+			Sleep(500);
 			turnOffFlashingLamp();
-			vTaskDelay(500);
+			Sleep(500);
 		}
-
 	}
 }
 
@@ -459,11 +495,12 @@ void vTaskGetPassBlockCylinder2(void* pvParameters) {
 
 void vTaskPushBlockCylinder0(void* pvParameters)
 {
-	int sleepTime = 50;
+	int sleepTime = WAIT_TIME_CYLINDER0;
 	while (true) {
 		xSemaphoreTake(xSemaphoreCylinder0Push, portMAX_DELAY);
-
+		
 		xSemaphoreGive(xSemaphoreStartBrickVerification);
+
 		gotoCylinderStart(RIGHT);
 
 		moveCylinderStartRight();
@@ -615,7 +652,7 @@ void vTaskSaveBrickFile(void* pvParameters) {
 	{
 		xQueueReceive(xQueueSaveBrick, &brickToSave, portMAX_DELAY);
 		fp = fopen(PATH, "a");
-
+			
 		if (fp == NULL) {
 			printf("Error opening file, couldn't save current brick\n");
 			break;
@@ -745,16 +782,106 @@ void vTaskEmergency(void* pvParameters)
 	while (true) {
 		vTaskSuspend(NULL);
 		printf("\nENTERED EMERGENCY MODE\n");
-		//vTaskSuspend(taskHandle);
-		//xSemaphoreGive(xSemaphoreFlashingLampEmergency);
+		
+		uInt8 p2 = GetP2();
+		xQueueSend(xQueueSavePort2,&p2,portMAX_DELAY);
+
+		stopConveyor();
+		stopCylinderStart();
+		stopCylinder1();
+		stopCylinder2();
+
+		vTaskSuspend(taskHandle0);
+		vTaskSuspend(taskHandle1);
+		vTaskSuspend(taskHandle2);
+		vTaskSuspend(taskHandle3);
+		vTaskSuspend(taskHandle4);
+		vTaskSuspend(taskHandle5);
+		vTaskSuspend(taskHandle6);
+		vTaskSuspend(taskHandle7);
+		vTaskSuspend(taskHandle8);
+		vTaskSuspend(taskHandle9);
+		vTaskSuspend(taskHandle10);
+		vTaskSuspend(taskHandle11);
+		vTaskSuspend(taskHandle12);
+		vTaskSuspend(taskHandle13);
+		vTaskSuspend(taskHandle14);
+		vTaskSuspend(taskHandle15);
+		vTaskSuspend(taskHandle16);
+		vTaskSuspend(taskHandle17);
+		vTaskSuspend(taskHandle18);
+		vTaskSuspend(taskHandle19);
+		vTaskSuspend(taskHandle20);
+		vTaskSuspend(taskHandle21);
+		xSemaphoreGive(xSemaphoreFlashingLampEmergency);
 	}
-}void vTaskResumeEmergency(void* pvParameters)
+}
+void vTaskResumeEmergency(void* pvParameters)
 {
+	uInt8 p2;
 	while (true) {
 		vTaskSuspend(NULL);
 		printf("\nEXITED EMERGENCY MODE\n");
-		//vTaskResume(taskHandle);
-		//xSemaphoreGive(xSemaphoreStopFlashingLampEmergency);
+
+		while (!xSemaphoreTake(xSemaphoreConveyorIsClear, 0)) {
+			continue;
+		}
+		xSemaphoreGive(xSemaphoreConveyorIsClear);
+
+		vTaskResume(taskHandle0);
+		vTaskResume(taskHandle1);
+		vTaskResume(taskHandle2);
+		vTaskResume(taskHandle3);
+		vTaskResume(taskHandle4);
+		vTaskResume(taskHandle5);
+		vTaskResume(taskHandle6);
+		vTaskResume(taskHandle7);
+		vTaskResume(taskHandle8);
+		vTaskResume(taskHandle9);
+		vTaskResume(taskHandle10);
+		vTaskResume(taskHandle11);
+		vTaskResume(taskHandle12);
+		vTaskResume(taskHandle13);
+		vTaskResume(taskHandle14);
+		vTaskResume(taskHandle15);
+		vTaskResume(taskHandle16);
+		vTaskResume(taskHandle17);
+		vTaskResume(taskHandle18);
+		vTaskResume(taskHandle19);
+		vTaskResume(taskHandle20);
+		vTaskResume(taskHandle21);
+		xQueueReceive(xQueueSavePort2, &p2, portMAX_DELAY);
+		ModifyP2(p2);
+		
+		xSemaphoreGive(xSemaphoreStopFlashingLampEmergency);
+	}
+}void vTaskRestartSystem(void* pvParameters)
+{
+	FILE* fp;
+	int tmp=0;
+
+	while (true) {
+		vTaskSuspend(NULL);
+		printf("\nRESTART SYSTEM\n");
+		xSemaphoreTake(xSemaphoreConveyorIsClear,portMAX_DELAY);
+
+		//write nada no file
+		fp = fopen(PATH, "w");
+		fprintf(fp, "");
+		fclose(fp);
+
+		//calibrate
+		xSemaphoreGive(xSemaphoreCylinder0Calibration);
+		xSemaphoreGive(xSemaphoreCylinder1Calibration);
+		xSemaphoreGive(xSemaphoreCylinder2Calibration);
+
+		//clean queue
+		xQueueReset(xQueueBrickType);
+
+		//ligar conveyor bue tempo
+		moveConveyor();
+		Sleep(10000);
+		xSemaphoreGive(xSemaphoreConveyorIsClear);
 	}
 }
 
@@ -784,13 +911,21 @@ void switch2_rising_isr(ULONGLONG lastTime) {
 	xYieldRequired = xTaskResumeFromISR(resumeTask);
 }
 
+void switch3_rising_isr(ULONGLONG lastTime) {
+	ULONGLONG time = GetTickCount64();
+	printf("\nSwitch three RISING detected at time = %llu...", time);
+	BaseType_t xYieldRequired;
+	// Resume the suspended task.
+	xYieldRequired = xTaskResumeFromISR(restartSystem);
+}
+
 void myDaemonTaskStartupHook(void) {
 	
 	inicializarPortos();
 
 	attachInterrupt(1, 4, switch1_rising_isr, RISING);
 	attachInterrupt(1, 3, switch2_rising_isr, RISING);
-	//attachInterrupt(1, 6, switch1_rising_isr, RISING);
+	attachInterrupt(1, 2, switch3_rising_isr, RISING);
 
 	//**********************************************************************************
 	//MENUS
@@ -843,50 +978,55 @@ void myDaemonTaskStartupHook(void) {
 	xSemaphoreFlashingLampEmergency = xSemaphoreCreateCounting(1, 0);
 	xSemaphoreStopFlashingLampEmergency = xSemaphoreCreateCounting(1, 0);
 
+	xSemaphoreConveyorIsClear = xSemaphoreCreateCounting(1, 1);
+	xQueueSavePort2 = xQueueCreate(1, sizeof(uInt8));
+
 	//**********************************************************************************
 	//MENUS
-	xTaskCreate(vTaskMenu, "vTask_Menu", 100, NULL, 0, &taskHandle);
+	xTaskCreate(vTaskMenu, "vTask_Menu", 100, NULL, 0, &taskHandle0);
 
 	//CALIBRAÇÃO MANUAL
-	xTaskCreate(vTaskManualCalibrationStart, "vTask_ManualCalibration", 100, NULL, 0, &taskHandle);
+	xTaskCreate(vTaskManualCalibrationStart, "vTask_ManualCalibration", 100, NULL, 0, &taskHandle1);
 
 	//INSERIR BLOCOS
-	xTaskCreate(vTaskRegisterBrick, "vTask_RegisterBrick", 100, NULL, 0, &taskHandle);
-	xTaskCreate(vTaskHandleConfirmedBrick, "vTask_HandleBrick", 100, NULL, 0, &taskHandle);
+	xTaskCreate(vTaskRegisterBrick, "vTask_RegisterBrick", 100, NULL, 0, &taskHandle2);
+	xTaskCreate(vTaskHandleConfirmedBrick, "vTask_HandleBrick", 100, NULL, 0, &taskHandle3);
 
 	//CONTADOR DE BLOCOS (Para saber quanto tem que ignorar)
-	xTaskCreate(vTaskGetPassBlockCylinder1, "vTask_GetPassBlockCylinder1", 100, NULL, 0, &taskHandle);
-	xTaskCreate(vTaskGetPassBlockCylinder2, "vTask_GetPassBlockCylinder2", 100, NULL, 0, &taskHandle);
+	xTaskCreate(vTaskGetPassBlockCylinder1, "vTask_GetPassBlockCylinder1", 100, NULL, 0, &taskHandle4);
+	xTaskCreate(vTaskGetPassBlockCylinder2, "vTask_GetPassBlockCylinder2", 100, NULL, 0, &taskHandle5);
 	//DETEÇÃO DE BLOCOS
-	xTaskCreate(vTaskBrickSensors, "vTask_BrickSensors", 100, NULL, 0, &taskHandle);
+	xTaskCreate(vTaskBrickSensors, "vTask_BrickSensors", 100, NULL, 0, &taskHandle6);
 
 	//LIMITAR CILINDROS ENTRE SENSORES
-	xTaskCreate(vTaskCylinder0Limit, "vTask_Cylinder0Limit", 100, NULL, 0, &taskHandle);
-	xTaskCreate(vTaskCylinder1Limit, "vTask_Cylinder1Limit", 100, NULL, 0, &taskHandle);
-	xTaskCreate(vTaskCylinder2Limit, "vTask_Cylinder2Limit", 100, NULL, 0, &taskHandle);
+	xTaskCreate(vTaskCylinder0Limit, "vTask_Cylinder0Limit", 100, NULL, 0, &taskHandle7);
+	xTaskCreate(vTaskCylinder1Limit, "vTask_Cylinder1Limit", 100, NULL, 0, &taskHandle8);
+	xTaskCreate(vTaskCylinder2Limit, "vTask_Cylinder2Limit", 100, NULL, 0, &taskHandle9);
 
 	//HISTORICO
-	xTaskCreate(vTaskSaveBrickFile, "vTask_SaveBrickFile", 100, NULL, 0, &taskHandle);
-	
+	xTaskCreate(vTaskSaveBrickFile, "vTask_SaveBrickFile", 100, NULL, 0, &taskHandle10);
+
 	//TOGGLES 
-	xTaskCreate(vTaskConveyor, "vTask_Conveyor", 100, NULL, 0, NULL);
-	xTaskCreate(vTaskFlashingLampDeniedBlock, "vTask_FlashingLamp", 100, NULL, 0, &taskHandle);
-	xTaskCreate(vTaskPushBlockCylinder0, "vTask_CylinderStart", 100, NULL, 0, &taskHandle);
-	xTaskCreate(vTaskPushBlockCylinder1, "vTask_Cylinder1", 100, NULL, 0, &taskHandle);
-	xTaskCreate(vTaskPushBlockCylinder2, "vTask_Cylinder2", 100, NULL, 0, &taskHandle);
+	xTaskCreate(vTaskConveyor, "vTask_Conveyor", 100, NULL, 0, &taskHandle11);
+	xTaskCreate(vTaskFlashingLampDeniedBlock, "vTask_FlashingLamp", 100, NULL, 0, &taskHandle12);
+	xTaskCreate(vTaskPushBlockCylinder0, "vTask_CylinderStart", 100, NULL, 0, &taskHandle13);
+	xTaskCreate(vTaskPushBlockCylinder1, "vTask_Cylinder1", 100, NULL, 0, &taskHandle14);
+	xTaskCreate(vTaskPushBlockCylinder2, "vTask_Cylinder2", 100, NULL, 0, &taskHandle15);
 
 	//CALIBRAÇÃO
-	xTaskCreate(vTaskCylinder0Calibration, "vTask_Cylinder0Calibration", 100, NULL, 0, &taskHandle);
-	xTaskCreate(vTaskCylinder1Calibration, "vTask_Cylinder1Calibration", 100, NULL, 0, &taskHandle);
-	xTaskCreate(vTaskCylinder2Calibration, "vTask_Cylinder2Calibration", 100, NULL, 0, &taskHandle);
+	xTaskCreate(vTaskCylinder0Calibration, "vTask_Cylinder0Calibration", 100, NULL, 0, &taskHandle16);
+	xTaskCreate(vTaskCylinder1Calibration, "vTask_Cylinder1Calibration", 100, NULL, 0, &taskHandle17);
+	xTaskCreate(vTaskCylinder2Calibration, "vTask_Cylinder2Calibration", 100, NULL, 0, &taskHandle18);
 
-	xTaskCreate(vTaskShowHistoric, "vTask_ShowHistoric", 100, NULL, 0, &taskHandle);
-	xTaskCreate(vTaskHistoricMenu, "vTask_HistoricMenu", 100, NULL, 0, &taskHandle);
-	xTaskCreate(vTaskShowBlockHistoric, "vTask_ShowBlockHistoric", 100, NULL, 0, &taskHandle);
+	xTaskCreate(vTaskShowHistoric, "vTask_ShowHistoric", 100, NULL, 0, &taskHandle19);
+	xTaskCreate(vTaskHistoricMenu, "vTask_HistoricMenu", 100, NULL, 0, &taskHandle20);
+	xTaskCreate(vTaskShowBlockHistoric, "vTask_ShowBlockHistoric", 100, NULL, 0, &taskHandle21);
 	
 	xTaskCreate(vTaskEmergency, "vTask_Emergency", 100, NULL, 0, &emergencyTask);
 	xTaskCreate(vTaskResumeEmergency, "vTask_ResumeEmergency", 100, NULL, 0, &resumeTask);
-	xTaskCreate(vTaskFlashingLampEmergency, "vTask_FlashingLampEmergency", 100, NULL, 0, &tasksToRunWhileEmergency);
+	xTaskCreate(vTaskFlashingLampEmergency, "vTask_FlashingLampEmergency", 100, NULL, 0, &blinkLight);
+
+	xTaskCreate(vTaskRestartSystem, "vTask_RestartSystem", 100, NULL, 0, &restartSystem);
 	//**********************************************************************************
 	}
 
