@@ -79,6 +79,7 @@ xSemaphoreHandle xSemaphoreConveyorIsClear;
 
 xSemaphoreHandle xSemaphoreShowHistoricMenu;
 xSemaphoreHandle xSemaphoreShowHistoricAll;
+xSemaphoreHandle xSemaphoreSystemCalibratedDuringRestart;
 xQueueHandle xQueueShowHistoricSpecific;
 
 xQueueHandle xQueueSaveBrick;
@@ -121,6 +122,7 @@ xTaskHandle taskHandle27;
 xTaskHandle taskHandle28;
 
 struct brick {
+	int expected;
 	int type;
 	bool rejected;
 	tm date;
@@ -139,7 +141,6 @@ void vTaskMenu(void* pvParameters) {
 		printf("\nb - Inserir blocos");
 		printf("\nm - Controlo manual");
 		printf("\nh - Mostrar historico");
-		printf("\ne - Estatistica");
 			
 		tecla = _getch();
 		switch (tecla) {
@@ -159,10 +160,6 @@ void vTaskMenu(void* pvParameters) {
 			break;
 		case 'h':
 			xSemaphoreGive(xSemaphoreShowHistoricMenu);
-			break;
-		case 'e':
-			printf("\nESTATISTICA NAO IMPLEMENTADO");
-			xSemaphoreGive(xSemaphoreMenu);
 			break;
 
 			//IgnorarEsc
@@ -312,8 +309,8 @@ void vTaskHandleBrick(void* pvParameters) {
 void vTaskHandleConfirmedBrick(void* pvParameters) {
 	int brickType;
 	int confirmedBrickType;
-	int brickAccepted = 1;
-	int brickRejected = 0;
+	bool brickAccepted = true;
+	bool brickRejected = false;
 	brick newbrick;
 	time_t t;
 	while (true) {
@@ -325,6 +322,7 @@ void vTaskHandleConfirmedBrick(void* pvParameters) {
 		//GET CURRENT TIME
 		t = time(NULL);
 		
+		newbrick.expected = brickType;
 		newbrick.type = confirmedBrickType;
 		newbrick.rejected = false;
 		newbrick.date = *localtime(&t);
@@ -514,7 +512,7 @@ void vTaskPushBlockCylinder0(void* pvParameters)
 
 void vTaskPushBlockCylinder1(void* pvParameters)
 {
-	int pushBrick;
+	bool pushBrick;
 	while (true) {
 		xQueueReceive(xQueueCylinder1Push, &pushBrick, portMAX_DELAY);
 		//xSemaphoreGive(xSemaphoreGetBlockCountCylinder1);
@@ -539,7 +537,7 @@ void vTaskPushBlockCylinder1(void* pvParameters)
 
 void vTaskPushBlockCylinder2(void* pvParameters)
 {
-	int pushBrick;
+	bool pushBrick;
 	while (true) {
 		xQueueReceive(xQueueCylinder2Push, &pushBrick, portMAX_DELAY);
 		//xSemaphoreGive(xSemaphoreGetBlockCountCylinder1);
@@ -651,7 +649,9 @@ void vTaskSaveBrickFile(void* pvParameters) {
 		else
 			strcpy(rejected, "NO");
 
-		fprintf(fp, "%d\t%s\t%d-%02d-%02d %02d:%02d:%02d\n", brickToSave.type, 
+		fprintf(fp, "%d\t\t%d\t\t%s\t\t%d-%02d-%02d %02d:%02d:%02d\n", 
+			brickToSave.expected,
+			brickToSave.type, 
 			rejected, 
 			tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
 		fclose(fp);
@@ -703,13 +703,15 @@ void vTaskShowHistoric(void* pvParameters) {
 		system("cls");
 		fp = fopen(PATH, "r");
 
+		printf("Expected\tCollected\tRejected\tTime\n\n");
+
 		c = fgetc(fp);
 		while (c != EOF)
 		{
 			printf("%c", c);
 			c = fgetc(fp);
 		}
-		printf("Press ESC to exit");
+		printf("\nPress ESC to exit");
 		
 		while (tecla != 27) {
 			tecla = _getch();
@@ -724,30 +726,30 @@ void vTaskShowBlockHistoric(void* pvParameters) {
 	int tecla = 0;
 	int brickType;
 	char rejected[4] = {0};
-	bool rejectedCount=0;
+	int rejectedCount=0;
 	int brickCount = 0;
 	int finished = 0;
+	int bufferLength = 127;
+	char buffer[127];
 	while (true) {
-		xQueueReceive(xQueueShowHistoricSpecific, &brickType, portMAX_DELAY);
 		brickCount = 0;
 		rejectedCount = 0;
-
+		xQueueReceive(xQueueShowHistoricSpecific, &brickType, portMAX_DELAY);
 		system("cls");
 
 		fp = fopen(PATH, "r");
 
-		int bufferLength = 127;
-		char buffer[127];
+		printf("Expected\tCollected\tRejected\tTime\n\n");
+
 		while (fgets(buffer, bufferLength, fp)) {
 			if (buffer[0] == brickType + '0') {
 				printf("%s", buffer);
 				brickCount++;
 				//asterisco quer dizer que não vai ser guardado na variável
-				sscanf(buffer,"%*d\t%3s\t%*d-%*02d-%*02d %*02d:%*02d:%*02d\n", &rejected);
+				sscanf(buffer,"%*d\t\t%*d\t\t%s\t\t%*d-%*02d-%*02d %*02d:%*02d:%*02d\n", &rejected);
 				if (!strcmp(rejected, "YES")) {
 					rejectedCount++;
 				}
-
 			}
 		}
 		printf("\nBlocos do tipo %d colocados: %d\n", brickType, brickCount);
@@ -755,7 +757,7 @@ void vTaskShowBlockHistoric(void* pvParameters) {
 		printf("Blocos do tipo %d rejeitados: %d\n", brickType, rejectedCount);
 
 		fclose(fp);
-		printf("Press ESC to exit");
+		printf("\nPress ESC to exit");
 		tecla = 0;
 		while (tecla != 27) {
 			tecla = _getch();
@@ -782,8 +784,6 @@ void vTaskEmergency(void* pvParameters)
 		vTaskSuspend(taskHandle1);
 		vTaskSuspend(taskHandle2);
 		vTaskSuspend(taskHandle3);
-		vTaskSuspend(taskHandle4);
-		vTaskSuspend(taskHandle5);
 		vTaskSuspend(taskHandle6);
 		vTaskSuspend(taskHandle7);
 		vTaskSuspend(taskHandle8);
@@ -814,13 +814,10 @@ void vTaskResumeEmergency(void* pvParameters)
 			continue;
 		}
 		xSemaphoreGive(xSemaphoreConveyorIsClear);
-
 		vTaskResume(taskHandle0);
 		vTaskResume(taskHandle1);
 		vTaskResume(taskHandle2);
 		vTaskResume(taskHandle3);
-		vTaskResume(taskHandle4);
-		vTaskResume(taskHandle5);
 		vTaskResume(taskHandle6);
 		vTaskResume(taskHandle7);
 		vTaskResume(taskHandle8);
@@ -839,6 +836,12 @@ void vTaskResumeEmergency(void* pvParameters)
 		vTaskResume(taskHandle21);
 		xQueueReceive(xQueueSavePort2, &p2, portMAX_DELAY);
 		ModifyP2(p2);
+		if (xSemaphoreTake(xSemaphoreSystemCalibratedDuringRestart, 0)) {
+			stopCylinderStart();
+			stopCylinder1();
+			stopCylinder2();
+		}
+		
 		
 		xSemaphoreGive(xSemaphoreStopFlashingLampEmergency);
 	}
@@ -854,16 +857,25 @@ void vTaskResumeEmergency(void* pvParameters)
 
 		//write nada no file
 		fp = fopen(PATH, "w");
-		fprintf(fp, "");
 		fclose(fp);
 
 		//calibrate
+		vTaskResume(taskHandle16);
+		vTaskResume(taskHandle17);
+		vTaskResume(taskHandle18);
+
 		xSemaphoreGive(xSemaphoreCylinder0Calibration);
 		xSemaphoreGive(xSemaphoreCylinder1Calibration);
 		xSemaphoreGive(xSemaphoreCylinder2Calibration);
 
+		xSemaphoreGive(xSemaphoreSystemCalibratedDuringRestart);
+
+
 		//clean queue
+		xQueueReset(xSemaphoreCylinder0Push);
 		xQueueReset(xQueueBrickType);
+		xQueueReset(xQueueCylinder1Push);
+		xQueueReset(xQueueCylinder2Push);
 
 		//ligar conveyor bue tempo
 		moveConveyor();
@@ -944,8 +956,8 @@ void myDaemonTaskStartupHook(void) {
 
 	//Semaforos para saber se é preciso ou não empurrar 
 	xSemaphoreCylinder0Push = xSemaphoreCreateCounting(100, 0);
-	xQueueCylinder1Push = xQueueCreate(100, sizeof(int));
-	xQueueCylinder2Push = xQueueCreate(100, sizeof(int));
+	xQueueCylinder1Push = xQueueCreate(100, sizeof(bool));
+	xQueueCylinder2Push = xQueueCreate(100, sizeof(bool));
 
 	//HISTORICO
 	xQueueSaveBrick = xQueueCreate(100, sizeof(brick));
@@ -958,6 +970,8 @@ void myDaemonTaskStartupHook(void) {
 	xSemaphoreFlashingLampDeniedBlock = xSemaphoreCreateCounting(1, 0);
 	xSemaphoreFlashingLampEmergency = xSemaphoreCreateCounting(1, 0);
 	xSemaphoreStopFlashingLampEmergency = xSemaphoreCreateCounting(1, 0);
+
+	xSemaphoreSystemCalibratedDuringRestart = xSemaphoreCreateCounting(1, 0);
 
 	xSemaphoreConveyorIsClear = xSemaphoreCreateCounting(1, 1);
 	xQueueSavePort2 = xQueueCreate(1, sizeof(uInt8));
