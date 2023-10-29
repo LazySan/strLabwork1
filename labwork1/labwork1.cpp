@@ -127,12 +127,12 @@ void vTaskMenu(void* pvParameters) {
 
 		int tecla = 0;
 		system("cls");
-		printf("\nMenu");
-		printf("\nc - Calibrar cilindros");
-		printf("\nb - Inserir blocos");
-		printf("\nm - Controlo manual");
-		printf("\nh - Mostrar historico");
-			
+		printf("\n\tMenu");
+		printf("\nc => Calibrar cilindros");
+		printf("\nb => Inserir blocos");
+		printf("\nm => Controlo manual");
+		printf("\nh => Mostrar historico");
+
 		tecla = _getch();
 		switch (tecla) {
 
@@ -182,8 +182,8 @@ void vTaskMenu(void* pvParameters) {
 //********************************
 void vTaskManualCalibrationStart(void* pvParameters) {
 
-int pos0, pos1, pos2;
-int tecla = 0;
+	int pos0, pos1, pos2;
+	int tecla = 0;
 	while (true) {
 
 		//Espera pelo semaforo xSemaphoreManualCalibration
@@ -191,7 +191,20 @@ int tecla = 0;
 
 		//Limpa o terminal
 		system("cls");
-		printf("\nEntrada em modo manual:");
+		printf("\nEntrada em modo manual");
+		printf("\nComandos:");
+		printf("\ntecla q => move Cilindro Start para esquerda");
+		printf("\ntecla a => move Cilindro Start para direita");
+		printf("\ntecla z => Para cilindro start");
+		printf("\ntecla w => Mover Cilindro1 para tras");
+		printf("\ntecla s => Mover Cilindro1 para frente");
+		printf("\ntecla x => Para cilindro1");
+		printf("\ntecla e => Mover Cilindro2 para tras");
+		printf("\ntecla d => Mover Cilindro2 para frente");
+		printf("\ntecla c => Para cilindro2");
+
+
+
 
 		//Reseta a variável
 		tecla = 0;
@@ -253,7 +266,7 @@ int tecla = 0;
 				break;
 			case 'x':
 
-				//Para cilindro start
+				//Para cilindro1
 				stopCylinder1();
 
 				break;
@@ -283,7 +296,7 @@ int tecla = 0;
 				break;
 			case 'c':
 
-				//Para cilindro start
+				//Para cilindro2
 				stopCylinder2();
 
 				break;
@@ -331,8 +344,8 @@ void vTaskRegisterBrick(void* pvParameters) {
 			//Bricks só podem ser do tipo 1, 2 ou 3
 			if (brickType >= '1' && brickType <= '3') {
 
-				printf("Inserido bloco do tipo %d\n", brickType-'0');
-				
+				printf("Inserido bloco do tipo %d\n", brickType - '0');
+
 				//Passar de char para int com - '0'
 				message = brickType - '0';
 
@@ -346,7 +359,7 @@ void vTaskRegisterBrick(void* pvParameters) {
 		}
 		//Voltar para o menu principal
 		xSemaphoreGive(xSemaphoreMenu);
-	}			
+	}
 }
 
 //********************************
@@ -368,11 +381,11 @@ void vTaskHandleConfirmedBrick(void* pvParameters) {
 
 		//Ordena o CilinderStart a empurrar o brick
 		xSemaphoreGive(xSemaphoreCylinder0Push);
-		
+
 		//Espera pela fila xQueueConfirmedBrickType
 		//confirmedBrickType vai ter o bloco que realmente entrou (verificado pelos sensores)
 		xQueueReceive(xQueueConfirmedBrickType, &confirmedBrickType, portMAX_DELAY);
-		
+
 		//Guardar variáveis na estrutura para depois guardar no histórico
 		newbrick.expected = brickType;
 		newbrick.type = confirmedBrickType;
@@ -385,7 +398,7 @@ void vTaskHandleConfirmedBrick(void* pvParameters) {
 		switch (brickType) {
 		case 1:
 			//Utilizador inseriu 1
-			
+
 			//Se o confirmado não for 1, vamos rejeitar o brick
 			if (confirmedBrickType != 1) {
 
@@ -395,7 +408,7 @@ void vTaskHandleConfirmedBrick(void* pvParameters) {
 
 				//Acender a LED que indica que o brick que foi inserido foi rejeitado
 				xSemaphoreGive(xSemaphoreFlashingLampDeniedBlock);
-				
+
 				//Atualizar variável que está a false por default
 				newbrick.rejected = true;
 			}
@@ -500,7 +513,7 @@ void vTaskBrickSensors(void* pvParameters) {
 			if (!sensorUpCheck) {
 				//Se ele tiver ativo
 				if (isActiveUpBrickSensor()) {
-					
+
 					//Incrementar o tipo de brick
 					brickType++;
 
@@ -609,7 +622,7 @@ void vTaskPushBlockCylinder0(void* pvParameters)
 	while (true) {
 		//Esperar pelo semaforo xSemaphoreCylinder0Push
 		xSemaphoreTake(xSemaphoreCylinder0Push, portMAX_DELAY);
-		
+
 		//Dizer aos sensores para perceberem que brick vai passar
 		xSemaphoreGive(xSemaphoreStartBrickVerification);
 
@@ -642,7 +655,7 @@ void vTaskPushBlockCylinder1(void* pvParameters)
 	while (true) {
 		//Esperar pela queue xQueueCylinder1Push
 		xQueueReceive(xQueueCylinder1Push, &pushBrick, portMAX_DELAY);
-		
+
 		//Esperar que o sensor fique ativo
 		while (!isActiveCylinder1Sensor()) {
 			continue;
@@ -651,14 +664,14 @@ void vTaskPushBlockCylinder1(void* pvParameters)
 		//Verificar se este brick é para este cilindro ou não
 		if (pushBrick) {
 			//Se sim, empurrá-lo
-			
+
 			//Parar conveyor
 			stopConveyor();
 
 			//Mover cilindro
 			gotoCylinder1(FRONT);
 			gotoCylinder1(BACK);
-			
+
 			//Ligar conveyor
 			xSemaphoreGive(xSemaphoreConveyor);
 		}
@@ -698,11 +711,11 @@ void vTaskPushBlockCylinder2(void* pvParameters)
 			//Mover cilindro
 			gotoCylinder2(FRONT);
 			gotoCylinder2(BACK);
-			
+
 			//Ligar conveyor
 			xSemaphoreGive(xSemaphoreConveyor);
 		}
-		
+
 		//Esperar até o sensor ficar desativo para voltar ao inicio
 		//Isto serve mais para ter a certeza que não há bugs quando os bricks estão muito juntos uns dos outros
 		while (isActiveCylinder2Sensor()) {
@@ -770,7 +783,7 @@ void vTaskCylinder0Limit(void* pvParameters)
 	while (true) {
 		//Esperar pelo semaforo xQueueCylinder0Limit
 		xQueueReceive(xQueueCylinder0Limit, &pos, portMAX_DELAY);
-		
+
 		//pos vai ter a posição para onde o cilindro se está a mover
 		//Enquanto o cilindro não tenha chegado à sua posição final
 		while (getCylinderStartPos() != pos) {
@@ -855,7 +868,7 @@ void vTaskSaveBrickFile(void* pvParameters) {
 		//Abrir o ficheiro em modo append
 		//append significa que ele só adiciona informação, não dá overwrite
 		fp = fopen(PATH, "a");
-		
+
 		//Erro a abrir o ficheiro
 		if (fp == NULL) {
 			printf("Erro a abrir ficheiro, brick atual não foi salvo\n");
@@ -873,12 +886,12 @@ void vTaskSaveBrickFile(void* pvParameters) {
 
 		//Escrever linha no ficheiro, %02d significa que vamos guardar 2 valores daquele inteiro
 		//Por exemplo: 2 fica 02
-		fprintf(fp, "%d\t\t%d\t\t%s\t\t%d-%02d-%02d %02d:%02d:%02d\n", 
+		fprintf(fp, "%d\t\t%d\t\t%s\t\t%d-%02d-%02d %02d:%02d:%02d\n",
 			brickToSave.expected,
-			brickToSave.type, 
-			rejected, 
+			brickToSave.type,
+			rejected,
 			tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
-		
+
 		//Fechar o ficheiro
 		fclose(fp);
 	}
@@ -895,7 +908,7 @@ void vTaskHistoricMenu(void* pvParameters) {
 
 	while (true) {
 		//Esperar pelo semaforo xSemaphoreShowHistoricMenu
-		xSemaphoreTake(xSemaphoreShowHistoricMenu,portMAX_DELAY);
+		xSemaphoreTake(xSemaphoreShowHistoricMenu, portMAX_DELAY);
 
 		//Resetar variável
 		tecla = 0;
@@ -909,28 +922,28 @@ void vTaskHistoricMenu(void* pvParameters) {
 
 		tecla = _getch();
 		switch (tecla) {
-			case 't':
-				//Mostrar o historico de todos os bricks
-				xSemaphoreGive(xSemaphoreShowHistoricAll);
-				break;
-			case '1': //Implementado em baixo
-			case '2': //Implementado em baixo
-			case '3':
-				//Mostrar historico de um tipo de brick em especifico
+		case 't':
+			//Mostrar o historico de todos os bricks
+			xSemaphoreGive(xSemaphoreShowHistoricAll);
+			break;
+		case '1': //Implementado em baixo
+		case '2': //Implementado em baixo
+		case '3':
+			//Mostrar historico de um tipo de brick em especifico
 
-				//Passar de char para int
-				brickType = tecla - '0';
+			//Passar de char para int
+			brickType = tecla - '0';
 
-				//Enviar o tipo de brick que queremos ver o historico para xQueueShowHistoricSpecific
-				xQueueSend(xQueueShowHistoricSpecific, &brickType, portMAX_DELAY);
-				break;
-			case 27: //esc
-				//Voltar ao menu principal
-				xSemaphoreGive(xSemaphoreMenu);
-				break;
-			default:
-				//Uma tecla não implementada foi primida, voltar ao menu atual
-				xSemaphoreGive(xSemaphoreShowHistoricMenu);
+			//Enviar o tipo de brick que queremos ver o historico para xQueueShowHistoricSpecific
+			xQueueSend(xQueueShowHistoricSpecific, &brickType, portMAX_DELAY);
+			break;
+		case 27: //esc
+			//Voltar ao menu principal
+			xSemaphoreGive(xSemaphoreMenu);
+			break;
+		default:
+			//Uma tecla não implementada foi primida, voltar ao menu atual
+			xSemaphoreGive(xSemaphoreShowHistoricMenu);
 		}
 	}
 }
@@ -947,7 +960,7 @@ void vTaskShowHistoric(void* pvParameters) {
 	while (true) {
 
 		//Esperar pela queue xSemaphoreShowHistoricAll
-		xSemaphoreTake(xSemaphoreShowHistoricAll,portMAX_DELAY);
+		xSemaphoreTake(xSemaphoreShowHistoricAll, portMAX_DELAY);
 
 		//Resetar variável
 		tecla = 0;
@@ -971,7 +984,7 @@ void vTaskShowHistoric(void* pvParameters) {
 			c = fgetc(fp);
 		}
 		printf("\nClique ESC para sair");
-		
+
 		//Enquanto a tecla nao for ESC
 		while (tecla != 27) {
 			tecla = _getch();
@@ -991,8 +1004,8 @@ void vTaskShowBlockHistoric(void* pvParameters) {
 	FILE* fp;
 	int tecla = 0;
 	int brickType;
-	char rejected[4] = {0};
-	int rejectedCount=0;
+	char rejected[4] = { 0 };
+	int rejectedCount = 0;
 	int brickCount = 0;
 	int finished = 0;
 	int bufferLength = 127;
@@ -1022,14 +1035,14 @@ void vTaskShowBlockHistoric(void* pvParameters) {
 			if (buffer[0] == brickType + '0') {
 				//Mostrar linha
 				printf("%s", buffer);
-				
+
 				//Começar a estatistica (bricks aceites e rejeitados)
 				//brickCount apenas serve para mostrar a estatistica no final desta função
 				brickCount++;
 
 				//Asteriscos servem para dizer o valor não vai ser guardado na variável
 				//Só nos interessa a variavel rejected para a estatistica
-				sscanf(buffer,"%*d\t\t%*d\t\t%s\t\t%*d-%*02d-%*02d %*02d:%*02d:%*02d\n", &rejected);
+				sscanf(buffer, "%*d\t\t%*d\t\t%s\t\t%*d-%*02d-%*02d %*02d:%*02d:%*02d\n", &rejected);
 
 				//Se o rejected for SIM, incrementar rejectedCount
 				if (!strcmp(rejected, "SIM")) {
@@ -1071,10 +1084,10 @@ void vTaskEmergency(void* pvParameters)
 		//A task suspende-se a si mesma até o interrupt lhe mandar retomar
 		vTaskSuspend(NULL);
 		printf("\nMODO DE EMERGENCIA ATIVO\n");
-		
+
 		//Guardar o valor de P2 (vai ter informação sobre o movimento do sistema)
 		p2 = GetP2();
-		xQueueSend(xQueueSavePort2,&p2,portMAX_DELAY);
+		xQueueSend(xQueueSavePort2, &p2, portMAX_DELAY);
 
 		//Parar tudo oq se pode mover
 		stopConveyor();
@@ -1146,8 +1159,8 @@ void vTaskResumeEmergency(void* pvParameters)
 		vTaskResume(taskHandle18);
 		vTaskResume(taskHandle19);
 		vTaskResume(taskHandle20);
-		vTaskResume(taskHandle21);	
-		
+		vTaskResume(taskHandle21);
+
 		//Mandar a LED parar a piscar
 		xSemaphoreGive(xSemaphoreStopFlashingLampEmergency);
 	}
@@ -1229,7 +1242,7 @@ void switch3_rising_isr(ULONGLONG lastTime) {
 // Inicialização de todas as tasks, semaforos e queues
 //********************************
 void myDaemonTaskStartupHook(void) {
-	
+
 	inicializarPortos();
 
 	attachInterrupt(1, 4, switch1_rising_isr, RISING);
@@ -1317,14 +1330,14 @@ void myDaemonTaskStartupHook(void) {
 	xTaskCreate(vTaskShowHistoric, "vTask_ShowHistoric", 100, NULL, 0, &taskHandle19);
 	xTaskCreate(vTaskHistoricMenu, "vTask_HistoricMenu", 100, NULL, 0, &taskHandle20);
 	xTaskCreate(vTaskShowBlockHistoric, "vTask_ShowBlockHistoric", 100, NULL, 0, &taskHandle21);
-	
+
 	xTaskCreate(vTaskEmergency, "vTask_Emergency", 100, NULL, 0, &emergencyTask);
 	xTaskCreate(vTaskResumeEmergency, "vTask_ResumeEmergency", 100, NULL, 0, &resumeTask);
 	xTaskCreate(vTaskFlashingLampEmergency, "vTask_FlashingLampEmergency", 100, NULL, 0, &blinkLight);
 
 	xTaskCreate(vTaskRestartSystem, "vTask_RestartSystem", 100, NULL, 0, &restartSystem);
 	//**********************************************************************************
-	}
+}
 
 //********************************
 // vAssertCalled
