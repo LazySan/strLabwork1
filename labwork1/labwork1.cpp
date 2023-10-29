@@ -1,5 +1,4 @@
 // labwork1.cpp : Este arquivo contém a função 'main'. A execução do programa começa e termina ali.
-//
 
 #include <iostream>
 #include<conio.h>
@@ -131,7 +130,7 @@ void vTaskMenu(void* pvParameters) {
 		printf("\nc => Calibrar cilindros");
 		printf("\nb => Inserir blocos");
 		printf("\nm => Controlo manual");
-		printf("\nh => Mostrar historico");
+		printf("\nh => Mostrar historico\n");
 
 		tecla = _getch();
 		switch (tecla) {
@@ -192,16 +191,16 @@ void vTaskManualCalibrationStart(void* pvParameters) {
 		//Limpa o terminal
 		system("cls");
 		printf("\nEntrada em modo manual");
-		printf("\nComandos:");
+		printf("\nComandos:\n");
 		printf("\ntecla q => move Cilindro Start para esquerda");
 		printf("\ntecla a => move Cilindro Start para direita");
-		printf("\ntecla z => Para cilindro start");
+		printf("\ntecla z => Para cilindro start\n");
 		printf("\ntecla w => Mover Cilindro1 para tras");
 		printf("\ntecla s => Mover Cilindro1 para frente");
-		printf("\ntecla x => Para cilindro1");
+		printf("\ntecla x => Para cilindro1\n");
 		printf("\ntecla e => Mover Cilindro2 para tras");
 		printf("\ntecla d => Mover Cilindro2 para frente");
-		printf("\ntecla c => Para cilindro2");
+		printf("\ntecla c => Para cilindro2\n");
 
 
 
@@ -915,7 +914,7 @@ void vTaskHistoricMenu(void* pvParameters) {
 
 		//Limpar o terminal
 		system("cls");
-		printf("1 - Mostrar blocos do tipo 1\n");
+		printf("\n1 - Mostrar blocos do tipo 1\n");
 		printf("2 - Mostrar blocos do tipo 2\n");
 		printf("3 - Mostrar blocos do tipo 3\n");
 		printf("t - Mostrar todos os blocos\n");
@@ -1083,7 +1082,7 @@ void vTaskEmergency(void* pvParameters)
 	while (true) {
 		//A task suspende-se a si mesma até o interrupt lhe mandar retomar
 		vTaskSuspend(NULL);
-		printf("\nMODO DE EMERGENCIA ATIVO\n");
+		printf("\nMODO DE EMERGENCIA ATIVADO\n");
 
 		//Guardar o valor de P2 (vai ter informação sobre o movimento do sistema)
 		p2 = GetP2();
@@ -1314,6 +1313,9 @@ void myDaemonTaskStartupHook(void) {
 
 	//HISTORICO
 	xTaskCreate(vTaskSaveBrickFile, "vTask_SaveBrickFile", 100, NULL, 0, &taskHandle10);
+	xTaskCreate(vTaskShowHistoric, "vTask_ShowHistoric", 100, NULL, 0, &taskHandle19);
+	xTaskCreate(vTaskHistoricMenu, "vTask_HistoricMenu", 100, NULL, 0, &taskHandle20);
+	xTaskCreate(vTaskShowBlockHistoric, "vTask_ShowBlockHistoric", 100, NULL, 0, &taskHandle21);
 
 	//TOGGLES 
 	xTaskCreate(vTaskConveyor, "vTask_Conveyor", 100, NULL, 0, &taskHandle11);
@@ -1327,15 +1329,11 @@ void myDaemonTaskStartupHook(void) {
 	xTaskCreate(vTaskCylinder1Calibration, "vTask_Cylinder1Calibration", 100, NULL, 0, &taskHandle17);
 	xTaskCreate(vTaskCylinder2Calibration, "vTask_Cylinder2Calibration", 100, NULL, 0, &taskHandle18);
 
-	xTaskCreate(vTaskShowHistoric, "vTask_ShowHistoric", 100, NULL, 0, &taskHandle19);
-	xTaskCreate(vTaskHistoricMenu, "vTask_HistoricMenu", 100, NULL, 0, &taskHandle20);
-	xTaskCreate(vTaskShowBlockHistoric, "vTask_ShowBlockHistoric", 100, NULL, 0, &taskHandle21);
-
+	//EMERGENCIA
 	xTaskCreate(vTaskEmergency, "vTask_Emergency", 100, NULL, 0, &emergencyTask);
 	xTaskCreate(vTaskResumeEmergency, "vTask_ResumeEmergency", 100, NULL, 0, &resumeTask);
-	xTaskCreate(vTaskFlashingLampEmergency, "vTask_FlashingLampEmergency", 100, NULL, 0, &blinkLight);
-
 	xTaskCreate(vTaskRestartSystem, "vTask_RestartSystem", 100, NULL, 0, &restartSystem);
+	xTaskCreate(vTaskFlashingLampEmergency, "vTask_FlashingLampEmergency", 100, NULL, 0, &blinkLight);
 	//**********************************************************************************
 }
 
