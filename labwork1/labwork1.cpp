@@ -312,8 +312,8 @@ void vTaskHandleBrick(void* pvParameters) {
 void vTaskHandleConfirmedBrick(void* pvParameters) {
 	int brickType;
 	int confirmedBrickType;
-	int ignoreCount1 = 0;
-	int ignoreCount2 = 0;
+	int brickAccepted = 1;
+	int brickRejected = 0;
 	brick newbrick;
 	time_t t;
 	while (true) {
@@ -332,27 +332,26 @@ void vTaskHandleConfirmedBrick(void* pvParameters) {
 		switch (brickType) {
 		case 1:
 			if (confirmedBrickType != 1) {
-				ignoreCount1++;
-				ignoreCount2++;
+				xQueueSend(xQueueCylinder1Push, &brickRejected, portMAX_DELAY);
+				xQueueSend(xQueueCylinder2Push, &brickRejected, portMAX_DELAY);
 				xSemaphoreGive(xSemaphoreFlashingLampDeniedBlock);
 				newbrick.rejected = true;
 			}
 			else {
-				xQueueSend(xQueueCylinder1Push, &ignoreCount1, portMAX_DELAY);
-				ignoreCount1 = 0;
+				brickAccepted = 1;
+				xQueueSend(xQueueCylinder1Push, &brickAccepted, portMAX_DELAY);
 			}
 			break;
 		case 2:
 			if (confirmedBrickType != 2) {
-				ignoreCount1++;
-				ignoreCount2++;
+				xQueueSend(xQueueCylinder1Push, &brickRejected, portMAX_DELAY);
+				xQueueSend(xQueueCylinder2Push, &brickRejected, portMAX_DELAY);
 				xSemaphoreGive(xSemaphoreFlashingLampDeniedBlock);
 				newbrick.rejected = true;
 			}
 			else {
-				ignoreCount1++;
-				xQueueSend(xQueueCylinder2Push, &ignoreCount2, portMAX_DELAY);
-				ignoreCount2 = 0;
+				xQueueSend(xQueueCylinder1Push, &brickRejected, portMAX_DELAY);
+				xQueueSend(xQueueCylinder2Push, &brickAccepted, portMAX_DELAY);
 			}
 			break;
 		case 3:
@@ -360,8 +359,8 @@ void vTaskHandleConfirmedBrick(void* pvParameters) {
 				xSemaphoreGive(xSemaphoreFlashingLampDeniedBlock);
 				newbrick.rejected = true;
 			}
-			ignoreCount1++;
-			ignoreCount2++;
+			xQueueSend(xQueueCylinder1Push, &brickRejected, portMAX_DELAY);
+			xQueueSend(xQueueCylinder2Push, &brickRejected, portMAX_DELAY);
 			break;
 		}
 		xQueueSend(xQueueSaveBrick, &newbrick, portMAX_DELAY);
@@ -443,7 +442,7 @@ void vTaskConveyor(void* pvParameters) {
 	}
 }
 
-void vTaskGetPassBlockCylinder1(void* pvParameters) {
+/*void vTaskGetPassBlockCylinder1(void* pvParameters) {
 	int passCount=0;
 
 	while (true) {
@@ -492,6 +491,7 @@ void vTaskGetPassBlockCylinder2(void* pvParameters) {
 		passCount = 0;
 	}
 }
+*/
 
 void vTaskPushBlockCylinder0(void* pvParameters)
 {
@@ -514,63 +514,50 @@ void vTaskPushBlockCylinder0(void* pvParameters)
 
 void vTaskPushBlockCylinder1(void* pvParameters)
 {
-	int ignoreCount;
-	int passedCount;
+	int pushBrick;
 	while (true) {
-		xQueueReceive(xQueueCylinder1Push, &ignoreCount, portMAX_DELAY);
-		xSemaphoreGive(xSemaphoreGetBlockCountCylinder1);
-		xQueueReceive(xQueueBrickPassedCylinder1, &passedCount, portMAX_DELAY);
+		xQueueReceive(xQueueCylinder1Push, &pushBrick, portMAX_DELAY);
+		//xSemaphoreGive(xSemaphoreGetBlockCountCylinder1);
+		//xQueueReceive(xQueueBrickPassedCylinder1, &passedCount, portMAX_DELAY);
 		
-		ignoreCount -= passedCount;
-		
-		while (ignoreCount >= 0) {
-			while (!isActiveCylinder1Sensor()) {
-				continue;
-			}
-			if (ignoreCount <= 0) {
-				xSemaphoreGive(xSemaphoreBlockBrickCountCylinder1);
-				stopConveyor();
-				gotoCylinder1(FRONT);
-				gotoCylinder1(BACK);
-				xSemaphoreGive(xSemaphoreConveyor);
-				xSemaphoreGive(xSemaphoreResumeBrickCountCylinder1);
-			}
-			ignoreCount--;
-			while (isActiveCylinder1Sensor()) {
-				continue;
-			}
+		while (!isActiveCylinder1Sensor()) {
+			continue;
+		}
+		if (pushBrick) {
+			//xSemaphoreGive(xSemaphoreBlockBrickCountCylinder1);
+			stopConveyor();
+			gotoCylinder1(FRONT);
+			gotoCylinder1(BACK);
+			xSemaphoreGive(xSemaphoreConveyor);
+			//xSemaphoreGive(xSemaphoreResumeBrickCountCylinder1);
+		}
+		while (isActiveCylinder1Sensor()) {
+			continue;
 		}
 	}
 }
 
 void vTaskPushBlockCylinder2(void* pvParameters)
 {
-	int ignoreCount;
-	int passedCount;
+	int pushBrick;
 	while (true) {
-		xQueueReceive(xQueueCylinder2Push, &ignoreCount, portMAX_DELAY);
+		xQueueReceive(xQueueCylinder2Push, &pushBrick, portMAX_DELAY);
+		//xSemaphoreGive(xSemaphoreGetBlockCountCylinder1);
+		//xQueueReceive(xQueueBrickPassedCylinder1, &passedCount, portMAX_DELAY);
 
-		xSemaphoreGive(xSemaphoreGetBlockCountCylinder2);
-		xQueueReceive(xQueueBrickPassedCylinder2, &passedCount, portMAX_DELAY);
-
-		ignoreCount -= passedCount;
-
-		while (ignoreCount >= 0) {
-			while (!isActiveCylinder2Sensor()) {
-				continue;
-			}
-			if (ignoreCount <= 0) {
-				xSemaphoreGive(xSemaphoreBlockBrickCountCylinder2);
-				stopConveyor();
-				gotoCylinder2(FRONT);
-				gotoCylinder2(BACK);
-				xSemaphoreGive(xSemaphoreConveyor);
-				xSemaphoreGive(xSemaphoreResumeBrickCountCylinder2);
-			}
-			ignoreCount--;
-			while (isActiveCylinder2Sensor()) {
-				continue;
-			}
+		while (!isActiveCylinder2Sensor()) {
+			continue;
+		}
+		if (pushBrick) {
+			//xSemaphoreGive(xSemaphoreBlockBrickCountCylinder1);
+			stopConveyor();
+			gotoCylinder2(FRONT);
+			gotoCylinder2(BACK);
+			xSemaphoreGive(xSemaphoreConveyor);
+			//xSemaphoreGive(xSemaphoreResumeBrickCountCylinder1);
+		}
+		while (isActiveCylinder2Sensor()) {
+			continue;
 		}
 	}
 }
@@ -896,24 +883,18 @@ void inicializarPortos() {
 }
 
 void switch1_rising_isr(ULONGLONG lastTime) {
-	ULONGLONG time = GetTickCount64();
-	printf("\nSwitch one RISING detected at time = %llu...\n", time);
 	BaseType_t xYieldRequired;
 	// Resume the suspended task.
 	xYieldRequired = xTaskResumeFromISR(emergencyTask);
 }
 
 void switch2_rising_isr(ULONGLONG lastTime) {
-	ULONGLONG time = GetTickCount64();
-	printf("\nSwitch two RISING detected at time = %llu...", time);
 	BaseType_t xYieldRequired;
 	// Resume the suspended task.
 	xYieldRequired = xTaskResumeFromISR(resumeTask);
 }
 
 void switch3_rising_isr(ULONGLONG lastTime) {
-	ULONGLONG time = GetTickCount64();
-	printf("\nSwitch three RISING detected at time = %llu...", time);
 	BaseType_t xYieldRequired;
 	// Resume the suspended task.
 	xYieldRequired = xTaskResumeFromISR(restartSystem);
@@ -993,8 +974,8 @@ void myDaemonTaskStartupHook(void) {
 	xTaskCreate(vTaskHandleConfirmedBrick, "vTask_HandleBrick", 100, NULL, 0, &taskHandle3);
 
 	//CONTADOR DE BLOCOS (Para saber quanto tem que ignorar)
-	xTaskCreate(vTaskGetPassBlockCylinder1, "vTask_GetPassBlockCylinder1", 100, NULL, 0, &taskHandle4);
-	xTaskCreate(vTaskGetPassBlockCylinder2, "vTask_GetPassBlockCylinder2", 100, NULL, 0, &taskHandle5);
+	//xTaskCreate(vTaskGetPassBlockCylinder1, "vTask_GetPassBlockCylinder1", 100, NULL, 0, &taskHandle4);
+	//xTaskCreate(vTaskGetPassBlockCylinder2, "vTask_GetPassBlockCylinder2", 100, NULL, 0, &taskHandle5);
 	//DETEÇÃO DE BLOCOS
 	xTaskCreate(vTaskBrickSensors, "vTask_BrickSensors", 100, NULL, 0, &taskHandle6);
 
