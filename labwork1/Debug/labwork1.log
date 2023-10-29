@@ -1,3 +1,3 @@
 ﻿  labwork1.cpp
-freeRTOS.lib(main.obj) : warning LNK4099: PDB '' não foi encontrado 'freeRTOS.lib(main.obj)' ou no ''; vinculando objeto quando quando sem nenhuma informação de depuração
+C:\str\labwork1\labwork1.cpp(1169,10): warning C4129: 'H': sequência de escape de caractere não reconhecida
   labwork1.vcxproj -> C:\str\labwork1\Debug\labwork1.exe

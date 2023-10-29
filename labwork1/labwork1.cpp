@@ -858,7 +858,7 @@ void vTaskSaveBrickFile(void* pvParameters) {
 		
 		//Erro a abrir o ficheiro
 		if (fp == NULL) {
-			printf("Error opening file, couldn't save current brick\n");
+			printf("Erro a abrir ficheiro, brick atual não foi salvo\n");
 			break;
 		}
 
@@ -867,9 +867,9 @@ void vTaskSaveBrickFile(void* pvParameters) {
 
 		//Passar de bool para string para guardar no ficheiro
 		if (brickToSave.rejected)
-			strcpy(rejected, "YES");
+			strcpy(rejected, "SIM");
 		else
-			strcpy(rejected, "NO");
+			strcpy(rejected, "NAO");
 
 		//Escrever linha no ficheiro, %02d significa que vamos guardar 2 valores daquele inteiro
 		//Por exemplo: 2 fica 02
@@ -960,7 +960,7 @@ void vTaskShowHistoric(void* pvParameters) {
 		fp = fopen(PATH, "r");
 
 		//Print da linha de cima para alinhar a informação
-		printf("Expected\tCollected\tRejected\tTime\n\n");
+		printf("Esperado\tRecebido\tRejeitado\tHora\n\n");
 
 		//c estava nao inicializado, isto só serve para ele não ser comparado a null
 		c = fgetc(fp);
@@ -970,7 +970,7 @@ void vTaskShowHistoric(void* pvParameters) {
 			printf("%c", c);
 			c = fgetc(fp);
 		}
-		printf("\nPress ESC to exit");
+		printf("\nClique ESC para sair");
 		
 		//Enquanto a tecla nao for ESC
 		while (tecla != 27) {
@@ -1013,7 +1013,7 @@ void vTaskShowBlockHistoric(void* pvParameters) {
 		fp = fopen(PATH, "r");
 
 		//Print da linha de cima para alinhar a informação
-		printf("Expected\tCollected\tRejected\tTime\n\n");
+		printf("Esperado\tRecebido\tRejeitado\tHora\n\n");
 
 		//fgets vai buscar a linha toda do ficheiro, se for o final retorna falso, saindo do while
 		while (fgets(buffer, bufferLength, fp)) {
@@ -1031,8 +1031,8 @@ void vTaskShowBlockHistoric(void* pvParameters) {
 				//Só nos interessa a variavel rejected para a estatistica
 				sscanf(buffer,"%*d\t\t%*d\t\t%s\t\t%*d-%*02d-%*02d %*02d:%*02d:%*02d\n", &rejected);
 
-				//Se o rejected for YES, incrementar rejectedCount
-				if (!strcmp(rejected, "YES")) {
+				//Se o rejected for SIM, incrementar rejectedCount
+				if (!strcmp(rejected, "SIM")) {
 					rejectedCount++;
 				}
 			}
@@ -1044,7 +1044,7 @@ void vTaskShowBlockHistoric(void* pvParameters) {
 
 		//Fechar o ficheiro
 		fclose(fp);
-		printf("\nPress ESC to exit");
+		printf("\nClique ESC para sair");
 
 		//Voltar a resetar a variável
 		tecla = 0;
@@ -1070,7 +1070,7 @@ void vTaskEmergency(void* pvParameters)
 	while (true) {
 		//A task suspende-se a si mesma até o interrupt lhe mandar retomar
 		vTaskSuspend(NULL);
-		printf("\nENTERED EMERGENCY MODE\n");
+		printf("\nMODO DE EMERGENCIA ATIVO\n");
 		
 		//Guardar o valor de P2 (vai ter informação sobre o movimento do sistema)
 		p2 = GetP2();
@@ -1120,7 +1120,7 @@ void vTaskResumeEmergency(void* pvParameters)
 	while (true) {
 		//A task suspende-se a si mesma até o interrupt lhe mandar voltar
 		vTaskSuspend(NULL);
-		printf("\nEXITED EMERGENCY MODE\n");
+		printf("\nMODO DE EMERGENCIA DESATIVADO\n");
 
 		//Recuperar o valor de P2 antes da emergencia e recupera-lo
 		xQueueReceive(xQueueSavePort2, &p2, portMAX_DELAY);
@@ -1166,7 +1166,7 @@ void vTaskRestartSystem(void* pvParameters)
 	while (true) {
 		//A task suspende-se a si mesma até o interrupt lhe mandar voltar
 		vTaskSuspend(NULL);
-		printf("\nRESTART SYSTEM\n");
+		printf("\HISTORICO REINICIADO\n");
 
 		//Limpar ficheiro
 		fp = fopen(PATH, "w");
